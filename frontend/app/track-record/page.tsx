@@ -11,7 +11,7 @@ export default async function Page() {
 
   return (
     <TerminalShell>
-      <TrackRecordPage initialModel={model} />
+      <TrackRecordPage />
     </TerminalShell>
   );
 }
