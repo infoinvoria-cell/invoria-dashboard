@@ -24,6 +24,7 @@ function buildSeries(
   name: string,
   description: string,
   kind: DatasetOption["kind"],
+  sourceGroup: DatasetOption["sourceGroup"],
   drift: number,
   volatility: number,
   signalBias: number,
@@ -66,6 +67,7 @@ function buildSeries(
     name,
     description,
     kind,
+    sourceGroup,
     observations,
   };
 }
@@ -73,18 +75,20 @@ function buildSeries(
 export const MOCK_DATASETS: DatasetOption[] = [
   buildSeries(
     11,
-    "Global Macro Basket",
-    "Historical market data with diversified macro beta and moderate signal overlay.",
-    "historical",
+    "Historical Market Basket",
+    "Historische Marktdaten mit diversifiziertem Macro-Beta und moderatem Signal-Overlay.",
+    "market",
+    "Marktdaten",
     0.00046,
     0.0108,
     0.06,
   ),
   buildSeries(
     29,
-    "Trend Engine Output",
-    "Engine strategy outputs with strong trend persistence and occasional defensive shorting.",
-    "engine",
+    "Strategy Simulation Data",
+    "Strategie-Simulationsdaten mit Trendpersistenz und defensiven Short-Phasen.",
+    "strategy",
+    "Strategie",
     0.00061,
     0.0124,
     0.22,
@@ -92,8 +96,9 @@ export const MOCK_DATASETS: DatasetOption[] = [
   buildSeries(
     77,
     "Screener Momentum Signals",
-    "Screener signals translated into strategy returns for robustness validation.",
+    "Screener-Signale transformiert in Strategie-Renditen zur Robustheitsprüfung.",
     "screener",
+    "Strategie",
     0.00038,
     0.0142,
     -0.04,

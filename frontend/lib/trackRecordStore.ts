@@ -3,12 +3,18 @@ import path from "path";
 
 import type { TrackRecordTradeInput, TradeDirection } from "@/components/track-record/metrics";
 
-const TRACK_RECORD_DATA_DIR = path.join(process.cwd(), "data", "track-record");
-const HISTORICAL_DATASET_PATH = path.join(TRACK_RECORD_DATA_DIR, "trades_clean_compounded.csv");
-const APPENDED_DATASET_SEED_PATH = path.join(TRACK_RECORD_DATA_DIR, "trades_appended_api.json");
-const APPENDED_DATASET_PATH = process.env.VERCEL
-  ? path.join("/tmp", "trades_appended_api.json")
-  : APPENDED_DATASET_SEED_PATH;
+const HISTORICAL_DATASET_PATH = path.join(
+  process.cwd(),
+  "..",
+  "live track record",
+  "trades_clean_compounded.csv",
+);
+const APPENDED_DATASET_PATH = path.join(
+  process.cwd(),
+  "..",
+  "live track record",
+  "trades_appended_api.json",
+);
 
 type StoredTrade = {
   date: string;
@@ -70,20 +76,32 @@ export async function loadHistoricalTrackRecordTrades(): Promise<TrackRecordTrad
 export async function loadAppendedTrackRecordTrades(): Promise<StoredTrade[]> {
   try {
     const raw = await fs.readFile(APPENDED_DATASET_PATH, "utf8");
-    return parseStoredTrades(raw);
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+
+    return parsed
+      .map((item, index) => {
+        const date = normalizeDate(String(item?.date ?? ""));
+        const returnPct = Number(item?.return_pct);
+        if (!Number.isFinite(returnPct)) return null;
+
+        return {
+          date,
+          return_pct: Number(returnPct),
+          trade_result: Number.isFinite(Number(item?.trade_result))
+            ? Number(item.trade_result)
+            : Number(returnPct),
+          trade_direction:
+            item?.trade_direction === "Long" || item?.trade_direction === "Short"
+              ? item.trade_direction
+              : deriveDirection(date, index),
+          source: "api" as const,
+        };
+      })
+      .filter((item): item is StoredTrade => item != null)
+      .sort((left, right) => new Date(left.date).getTime() - new Date(right.date).getTime());
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-      if (APPENDED_DATASET_PATH !== APPENDED_DATASET_SEED_PATH) {
-        try {
-          const fallbackRaw = await fs.readFile(APPENDED_DATASET_SEED_PATH, "utf8");
-          return parseStoredTrades(fallbackRaw);
-        } catch (fallbackError) {
-          if ((fallbackError as NodeJS.ErrnoException).code === "ENOENT") {
-            return [];
-          }
-          throw fallbackError;
-        }
-      }
       return [];
     }
     throw error;
@@ -140,31 +158,4 @@ export async function appendTrackRecordTrades(input: TrackRecordTradeInput | Tra
 export async function getHistoricalTrackRecordEndDate(): Promise<string | null> {
   const historical = await loadHistoricalTrackRecordTrades();
   return historical.length > 0 ? historical[historical.length - 1].date : null;
-}
-
-function parseStoredTrades(raw: string): StoredTrade[] {
-  const parsed = JSON.parse(raw);
-  if (!Array.isArray(parsed)) return [];
-
-  return parsed
-    .map((item, index) => {
-      const date = normalizeDate(String(item?.date ?? ""));
-      const returnPct = Number(item?.return_pct);
-      if (!Number.isFinite(returnPct)) return null;
-
-      return {
-        date,
-        return_pct: Number(returnPct),
-        trade_result: Number.isFinite(Number(item?.trade_result))
-          ? Number(item.trade_result)
-          : Number(returnPct),
-        trade_direction:
-          item?.trade_direction === "Long" || item?.trade_direction === "Short"
-            ? item.trade_direction
-            : deriveDirection(date, index),
-        source: "api" as const,
-      };
-    })
-    .filter((item): item is StoredTrade => item != null)
-    .sort((left, right) => new Date(left.date).getTime() - new Date(right.date).getTime());
 }

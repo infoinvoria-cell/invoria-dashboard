@@ -188,22 +188,19 @@ export function polygonColor(
   inflationByCountry: Record<string, number>,
   policyRateByCountry: Record<string, PolicyRateCountryEntry>,
   commodityByRegion: Record<string, number>,
-  goldThemeEnabled = false,
 ): string {
-  const defaultBlue = "rgba(52, 86, 136, 0.24)";
-  const defaultGold = "rgba(116,97,54,0.32)";
   if (mode === "none" || mode === "volatility") {
-    return goldThemeEnabled ? defaultGold : defaultBlue;
+    return "rgba(52, 86, 136, 0.24)";
   }
   if (mode === "inflation") {
     const bucket = majorBucketOf(feature);
-    if (!bucket || !MAJOR_BUCKETS.has(bucket)) return goldThemeEnabled ? defaultGold : defaultBlue;
+    if (!bucket || !MAJOR_BUCKETS.has(bucket)) return "rgba(52, 86, 136, 0.24)";
     const value = normalizeMapValue(inflationByCountry, bucket);
     return inflationColor(value);
   }
   if (mode === "policy_rate") {
     const bucket = majorBucketOf(feature);
-    if (!bucket || !MAJOR_BUCKETS.has(bucket)) return goldThemeEnabled ? defaultGold : defaultBlue;
+    if (!bucket || !MAJOR_BUCKETS.has(bucket)) return "rgba(52, 86, 136, 0.24)";
     const item = normalizeMapValue(policyRateByCountry, bucket);
     return policyRateColor(item?.rate);
   }
@@ -212,17 +209,16 @@ export function polygonColor(
     const value = Number(commodityByRegion[region] ?? 0);
     return commodityColor(value);
   }
-  return goldThemeEnabled ? defaultGold : defaultBlue;
+  return "rgba(52, 86, 136, 0.24)";
 }
 
 export function polygonStrokeColor(
   mode: OverlayMode,
   feature: GeoFeature,
   policyRateByCountry: Record<string, PolicyRateCountryEntry>,
-  goldThemeEnabled = false,
 ): string {
   if (mode !== "policy_rate") {
-    return goldThemeEnabled ? "rgba(214,178,74,0.58)" : "rgba(41,98,255,0.58)";
+    return "rgba(41,98,255,0.58)";
   }
   const bucket = majorBucketOf(feature);
   if (!bucket || !MAJOR_BUCKETS.has(bucket)) return "rgba(41,98,255,0.34)";

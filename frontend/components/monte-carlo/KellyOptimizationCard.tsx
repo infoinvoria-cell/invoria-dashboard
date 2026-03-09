@@ -21,6 +21,7 @@ type Props = {
   payoffRatio: number;
   drawdownSeries: DrawdownPoint[];
   sharpeStabilityMedian: number;
+  animationProgress: number;
 };
 
 function formatPercent(value: number): string {
@@ -34,8 +35,10 @@ export default function KellyOptimizationCard({
   payoffRatio,
   drawdownSeries,
   sharpeStabilityMedian,
+  animationProgress,
 }: Props) {
   const palette = getMonteCarloPalette(theme);
+  const visibleSeries = drawdownSeries.slice(0, Math.max(2, Math.round(drawdownSeries.length * Math.max(0.05, animationProgress))));
 
   return (
     <section className="glass-panel rounded-[24px] border p-4 min-[769px]:p-5" style={{ background: palette.panelBackground, borderColor: palette.border, boxShadow: `0 18px 44px rgba(0,0,0,0.30), 0 0 28px ${palette.glow}` }}>
@@ -102,7 +105,7 @@ export default function KellyOptimizationCard({
 
         <div className="h-[270px]">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={drawdownSeries} margin={{ top: 10, right: 10, bottom: 6, left: 0 }}>
+            <AreaChart data={visibleSeries} margin={{ top: 10, right: 10, bottom: 6, left: 0 }}>
               <CartesianGrid stroke={palette.chartGrid} vertical={false} />
               <XAxis dataKey="step" tick={{ fill: palette.muted, fontSize: 10 }} tickLine={false} axisLine={false} />
               <YAxis tick={{ fill: palette.muted, fontSize: 10 }} tickFormatter={(value) => `${(value * 100).toFixed(0)}%`} tickLine={false} axisLine={false} width={46} />
@@ -110,8 +113,8 @@ export default function KellyOptimizationCard({
                 contentStyle={{ borderRadius: 12, border: `1px solid ${palette.border}`, background: theme === "dark" ? "rgba(11,9,7,0.95)" : "rgba(9,18,38,0.95)" }}
                 labelStyle={{ color: palette.heading }}
               />
-              <Area type="monotone" dataKey="p95Worst" stroke={palette.negative} fill={palette.negative} fillOpacity={0.2} />
-              <Area type="monotone" dataKey="median" stroke={palette.accent} fill={palette.accent} fillOpacity={0.28} />
+              <Area type="monotone" dataKey="p95Worst" stroke={palette.negative} fill={palette.negative} fillOpacity={0.2} isAnimationActive={false} />
+              <Area type="monotone" dataKey="median" stroke={palette.accent} fill={palette.accent} fillOpacity={0.28} isAnimationActive={false} />
             </AreaChart>
           </ResponsiveContainer>
         </div>

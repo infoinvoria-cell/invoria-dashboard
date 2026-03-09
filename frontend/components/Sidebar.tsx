@@ -9,6 +9,7 @@ import {
   Blocks,
   ChevronLeft,
   ChevronRight,
+  FolderKanban,
   GitBranch,
   Globe2,
   Home,
@@ -49,6 +50,7 @@ const navGroups: Array<{ label: string; items: NavItem[] }> = [
       { id: "screener", label: "Screener", icon: Search, href: "/screener", activePaths: ["/screener"] },
       { id: "seasonality", label: "Seasonality", icon: TrendingUp, href: "/seasonality", activePaths: ["/seasonality"] },
       { id: "track_record", label: "Track Record", icon: Activity, href: "/track-record", activePaths: ["/track-record"] },
+      { id: "edge_portfolio", label: "Edge Portfolio", icon: FolderKanban, href: "/edge-portfolio", activePaths: ["/edge-portfolio"] },
     ],
   },
   {
@@ -138,11 +140,25 @@ export default function Sidebar() {
       syncMobile(event.matches);
     };
 
+    const onThemeEvent = (event: Event) => {
+      const custom = event as CustomEvent<{ theme?: string; themeCanonical?: string }>;
+      const canonical = String(custom.detail?.themeCanonical || "").toLowerCase();
+      const legacy = String(custom.detail?.theme || "").toLowerCase();
+      if (canonical === "blue" || legacy === "blue") {
+        setTheme("blue");
+        return;
+      }
+      if (canonical === "black" || legacy === "black" || legacy === "gold") {
+        setTheme("black");
+      }
+    };
+
     if ("addEventListener" in mediaQuery) {
       mediaQuery.addEventListener("change", onMediaChange);
     } else {
       legacyMediaQuery.addListener?.(onMediaChange);
     }
+    window.addEventListener("invoria-theme-set", onThemeEvent as EventListener);
 
     return () => {
       if ("removeEventListener" in mediaQuery) {
@@ -150,6 +166,7 @@ export default function Sidebar() {
       } else {
         legacyMediaQuery.removeListener?.(onMediaChange);
       }
+      window.removeEventListener("invoria-theme-set", onThemeEvent as EventListener);
     };
   }, []);
 
@@ -284,8 +301,6 @@ export default function Sidebar() {
           ))}
         </nav>
 
-        <div className="ivq-sidebar-spacer" />
-
         <div className="ivq-sidebar-theme">
           <h2 className="ivq-sidebar-group-title ivq-sidebar-theme-title">Theme</h2>
           <div className="ivq-sidebar-theme-grid">
@@ -293,22 +308,28 @@ export default function Sidebar() {
               type="button"
               className={`ivq-theme-btn ${theme === "blue" ? "is-active" : ""}`}
               onClick={() => onThemeClick("blue")}
-              title="Blue Theme"
+              title="Light Blue"
             >
-              <span className="ivq-theme-btn-label">Blue Theme</span>
-              <span className="ivq-theme-btn-short">Blu</span>
+              <span className="ivq-theme-btn-label">Light Blue</span>
+              <span className="ivq-theme-btn-short">
+                <span className="ivq-theme-btn-dot is-blue" />
+              </span>
             </button>
             <button
               type="button"
               className={`ivq-theme-btn ${theme === "black" ? "is-active" : ""}`}
               onClick={() => onThemeClick("black")}
-              title="Dark Black"
+              title="Dark Gold"
             >
-              <span className="ivq-theme-btn-label">Dark Black</span>
-              <span className="ivq-theme-btn-short">Blk</span>
+              <span className="ivq-theme-btn-label">Dark Gold</span>
+              <span className="ivq-theme-btn-short">
+                <span className="ivq-theme-btn-dot is-gold" />
+              </span>
             </button>
           </div>
         </div>
+
+        <div className="ivq-sidebar-spacer" />
       </aside>
     </>
   );

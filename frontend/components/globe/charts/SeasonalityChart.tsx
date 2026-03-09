@@ -1,216 +1,233 @@
-import { useEffect, useMemo, useRef } from "react";
-import {
-  AreaSeries,
-  ColorType,
-  CrosshairMode,
-  LineSeries,
-  type IChartApi,
-  type ISeriesApi,
-  type UTCTimestamp,
-  createChart,
-} from "lightweight-charts";
+"use client";
+
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { SeasonalityResponse } from "../../../types";
-import { getSeasonDirection, normalizedSeasonalityCurve, seasonTone } from "../../../lib/seasonality";
 
 type Props = {
   payload: SeasonalityResponse | null;
   loopReplayTick?: number;
+  lineColor?: string;
+  rangeStartDay?: number;
+  rangeEndDay?: number;
+  minHold?: number;
+  maxHold?: number;
+  onRangeChange?: (startDay: number, endDay: number) => void;
 };
 
-function dayTs(dayOffset: number): UTCTimestamp {
-  const base = new Date();
-  base.setUTCHours(0, 0, 0, 0);
-  const next = base.getTime() + dayOffset * 86400000;
-  return Math.floor(next / 1000) as UTCTimestamp;
+type Point = {
+  day: number;
+  value: number;
+};
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
 }
 
 function rgba(hex: string, alpha: number): string {
   const clean = String(hex || "").replace("#", "");
-  const n = clean.length === 3
-    ? clean.split("").map((c) => `${c}${c}`).join("")
+  const normalized = clean.length === 3
+    ? clean.split("").map((char) => `${char}${char}`).join("")
     : clean.padEnd(6, "0").slice(0, 6);
-  const r = parseInt(n.slice(0, 2), 16);
-  const g = parseInt(n.slice(2, 4), 16);
-  const b = parseInt(n.slice(4, 6), 16);
-  return `rgba(${r},${g},${b},${Math.max(0, Math.min(1, alpha))})`;
+  const r = Number.parseInt(normalized.slice(0, 2), 16);
+  const g = Number.parseInt(normalized.slice(2, 4), 16);
+  const b = Number.parseInt(normalized.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${clamp(alpha, 0, 1)})`;
 }
 
-function seasonFill(direction: "LONG" | "SHORT", tone: string) {
-  // AreaSeries creates the desired "line glow + fade away" look.
-  // Keep stronger color near the line, transparent away from it.
-  if (direction === "LONG") {
-    return {
-      topColor: rgba(tone, 0.42),
-      bottomColor: rgba(tone, 0.03),
-    };
-  }
-  return {
-    topColor: rgba(tone, 0.40),
-    bottomColor: rgba(tone, 0.03),
-  };
+function monthLabel(day: number): string {
+  const base = new Date(Date.UTC(2024, 0, 1));
+  base.setUTCDate(base.getUTCDate() + clamp(day, 1, 366) - 1);
+  return base.toLocaleDateString("de-DE", { month: "short", day: "2-digit", timeZone: "UTC" });
 }
 
-export default function SeasonalityChart({ payload, loopReplayTick = 0 }: Props) {
+export default function SeasonalityChart({
+  payload,
+  lineColor = "#4d87fe",
+  rangeStartDay,
+  rangeEndDay,
+  minHold = 10,
+  maxHold = 20,
+  onRangeChange,
+}: Props) {
   const hostRef = useRef<HTMLDivElement | null>(null);
-  const chartRef = useRef<IChartApi | null>(null);
-  const lineSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
-  const fillSeriesRef = useRef<ISeriesApi<"Area"> | null>(null);
-  const loopAnimFrameRef = useRef<number | null>(null);
+  const dragAnchorRef = useRef<number | null>(null);
+  const [dragging, setDragging] = useState(false);
 
-  const direction = useMemo(() => getSeasonDirection(payload), [payload?.stats?.direction]);
-  const tone = seasonTone(direction);
-  const fills = useMemo(() => seasonFill(direction, tone), [direction, tone]);
+  const points = useMemo<Point[]>(
+    () =>
+      (payload?.curve ?? [])
+        .map((point) => ({
+          day: clamp(Math.round(Number(point.x) + 1), 1, 366),
+          value: Number(point.y),
+        }))
+        .filter((point) => Number.isFinite(point.value))
+        .slice(0, 366),
+    [payload?.curve],
+  );
 
-  useEffect(() => {
+  const geometry = useMemo(() => {
+    const width = 1080;
+    const height = 440;
+    const left = 18;
+    const right = 18;
+    const top = 18;
+    const bottom = 20;
+    const usableWidth = width - left - right;
+    const usableHeight = height - top - bottom;
+    const minValue = Math.min(...points.map((point) => point.value), 0);
+    const maxValue = Math.max(...points.map((point) => point.value), 0);
+    const spread = Math.max(maxValue - minValue, 0.0001);
+    return {
+      width,
+      height,
+      left,
+      right,
+      top,
+      bottom,
+      usableWidth,
+      usableHeight,
+      minValue,
+      maxValue,
+      spread,
+    };
+  }, [points]);
+
+  const xForDay = (day: number) =>
+    geometry.left + (((clamp(day, 1, 366) - 1) / 365) * geometry.usableWidth);
+  const yForValue = (value: number) =>
+    geometry.top + (geometry.usableHeight - (((value - geometry.minValue) / geometry.spread) * geometry.usableHeight));
+
+  const path = useMemo(() => {
+    if (points.length < 2) return "";
+    return points
+      .map((point, index) => `${index === 0 ? "M" : "L"}${xForDay(point.day).toFixed(2)},${yForValue(point.value).toFixed(2)}`)
+      .join(" ");
+  }, [points]);
+
+  const fillPath = useMemo(() => {
+    if (!path || points.length < 2) return "";
+    const baseline = yForValue(0);
+    const first = points[0];
+    const last = points[points.length - 1];
+    return `${path} L${xForDay(last.day).toFixed(2)},${baseline.toFixed(2)} L${xForDay(first.day).toFixed(2)},${baseline.toFixed(2)} Z`;
+  }, [path, points]);
+
+  const effectiveRangeStart = rangeStartDay ?? 1;
+  const effectiveRangeEnd = rangeEndDay ?? Math.min(366, effectiveRangeStart + minHold);
+  const selectionLeft = xForDay(Math.min(effectiveRangeStart, effectiveRangeEnd));
+  const selectionRight = xForDay(Math.max(effectiveRangeStart, effectiveRangeEnd));
+  const selectionWidth = Math.max(4, selectionRight - selectionLeft);
+
+  const updateRangeFromPointer = (pointerX: number) => {
     const host = hostRef.current;
-    if (!host) return;
-
-    const chart = createChart(host, {
-      autoSize: true,
-      layout: {
-        background: { type: ColorType.Solid, color: "transparent" },
-        textColor: "#90a5c0",
-        fontSize: 10,
-        attributionLogo: false,
-      },
-      localization: {
-        locale: "de-DE",
-        dateFormat: "dd.MM.yyyy",
-      },
-      rightPriceScale: {
-        borderColor: "rgba(109,132,160,0.35)",
-        scaleMargins: {
-          top: 0.1,
-          bottom: 0.2,
-        },
-      },
-      timeScale: {
-        borderColor: "rgba(109,132,160,0.35)",
-        fixLeftEdge: true,
-        fixRightEdge: true,
-        lockVisibleTimeRangeOnResize: true,
-        rightOffset: 0,
-        barSpacing: 15,
-        minBarSpacing: 9,
-        timeVisible: true,
-        secondsVisible: false,
-      },
-      grid: {
-        vertLines: { color: "rgba(0,0,0,0)" },
-        horzLines: { color: "rgba(0,0,0,0)" },
-      },
-      crosshair: {
-        mode: CrosshairMode.Normal,
-        vertLine: {
-          color: "rgba(170,194,226,0.36)",
-          width: 1,
-          style: 0,
-          labelBackgroundColor: "rgba(30,44,70,0.92)",
-        },
-        horzLine: {
-          color: "rgba(170,194,226,0.36)",
-          width: 1,
-          style: 0,
-          labelBackgroundColor: "rgba(30,44,70,0.92)",
-        },
-      },
-      handleScroll: false,
-      handleScale: false,
-    });
-    chartRef.current = chart;
-
-    fillSeriesRef.current = chart.addSeries(AreaSeries, {
-      topColor: fills.topColor,
-      bottomColor: fills.bottomColor,
-      lineColor: rgba(tone, 0),
-      lineWidth: 1,
-      lastValueVisible: false,
-      priceLineVisible: false,
-    });
-
-    lineSeriesRef.current = chart.addSeries(LineSeries, {
-      color: tone,
-      lineWidth: 2,
-      lastValueVisible: false,
-      priceLineVisible: false,
-    });
-
-    return () => {
-      chart.remove();
-      chartRef.current = null;
-      lineSeriesRef.current = null;
-      fillSeriesRef.current = null;
-    };
-  }, []);
+    const anchor = dragAnchorRef.current;
+    if (!host || anchor == null) return;
+    const rect = host.getBoundingClientRect();
+    if (rect.width <= 0) return;
+    const ratio = clamp((pointerX - rect.left) / rect.width, 0, 1);
+    const targetDay = clamp(Math.round(ratio * 365) + 1, 1, 366);
+    const baseStart = Math.min(anchor, targetDay);
+    const baseEnd = Math.max(anchor, targetDay);
+    const desiredHold = clamp(Math.max(1, baseEnd - baseStart), minHold, maxHold);
+    const normalizedStart = clamp(baseStart, 1, 366 - desiredHold);
+    const normalizedEnd = clamp(normalizedStart + desiredHold, normalizedStart + 1, 366);
+    onRangeChange?.(normalizedStart, normalizedEnd);
+  };
 
   useEffect(() => {
-    const chart = chartRef.current;
-    const lineSeries = lineSeriesRef.current;
-    const fillSeries = fillSeriesRef.current;
-    if (!chart || !lineSeries || !fillSeries) return;
-    if (loopAnimFrameRef.current != null) {
-      window.cancelAnimationFrame(loopAnimFrameRef.current);
-      loopAnimFrameRef.current = null;
-    }
-
-    const curve = normalizedSeasonalityCurve(payload);
-    const data = curve.map((row) => ({ time: dayTs(row.x), value: row.y }));
-
-    const nextFills = seasonFill(direction, tone);
-    fillSeries.applyOptions({
-      topColor: nextFills.topColor,
-      bottomColor: nextFills.bottomColor,
-      lineColor: rgba(tone, 0),
-    });
-    lineSeries.applyOptions({ color: tone });
-
-    if (loopReplayTick > 0 && data.length > 2) {
-      const total = data.length;
-      const startLen = 2;
-      let shown = startLen;
-      lineSeries.setData(data.slice(0, startLen));
-      fillSeries.setData(data.slice(0, startLen));
-      chart.timeScale().fitContent();
-
-      const t0 = performance.now();
-      const pointsPerSecond = 34;
-      const animate = (now: number) => {
-        const target = Math.max(
-          startLen,
-          Math.min(total, Math.floor(startLen + ((now - t0) / 1000) * pointsPerSecond)),
-        );
-        if (target !== shown) {
-          shown = target;
-          const next = data.slice(0, shown);
-          lineSeries.setData(next);
-          fillSeries.setData(next);
-          chart.timeScale().fitContent();
-        }
-        if (shown < total) {
-          loopAnimFrameRef.current = window.requestAnimationFrame(animate);
-        } else {
-          loopAnimFrameRef.current = null;
-        }
-      };
-      loopAnimFrameRef.current = window.requestAnimationFrame(animate);
-    } else {
-      lineSeries.setData(data);
-      fillSeries.setData(data);
-      chart.timeScale().fitContent();
-    }
-
-    return () => {
-      if (loopAnimFrameRef.current != null) {
-        window.cancelAnimationFrame(loopAnimFrameRef.current);
-        loopAnimFrameRef.current = null;
-      }
+    if (!dragging) return;
+    const handlePointerMove = (event: PointerEvent) => {
+      updateRangeFromPointer(event.clientX);
     };
-  }, [direction, loopReplayTick, payload, tone]);
+    const handlePointerUp = () => {
+      dragAnchorRef.current = null;
+      setDragging(false);
+    };
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+    };
+  }, [dragging, maxHold, minHold, onRangeChange]);
+
+  if (points.length < 2) {
+    return <div className="h-full w-full rounded-[18px] border border-white/10 bg-white/[0.03]" />;
+  }
 
   return (
-    <div className="relative h-full w-full overflow-hidden">
-      <div ref={hostRef} className="h-full w-full overflow-hidden" />
+    <div
+      ref={hostRef}
+      className={`relative h-full w-full overflow-hidden rounded-[18px] ${onRangeChange ? "cursor-crosshair" : ""}`}
+      onPointerDown={(event) => {
+        const rect = event.currentTarget.getBoundingClientRect();
+        const ratio = clamp((event.clientX - rect.left) / rect.width, 0, 1);
+        if (!onRangeChange) return;
+        const anchor = clamp(Math.round(ratio * 365) + 1, 1, 366);
+        dragAnchorRef.current = anchor;
+        setDragging(true);
+        updateRangeFromPointer(event.clientX);
+      }}
+    >
+      <svg viewBox={`0 0 ${geometry.width} ${geometry.height}`} className="h-full w-full">
+        <defs>
+          <linearGradient id="ivq-seasonality-fill" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor={rgba(lineColor, 0.22)} />
+            <stop offset="100%" stopColor={rgba(lineColor, 0.03)} />
+          </linearGradient>
+        </defs>
+
+        {[61, 122, 183, 244, 305].map((day) => (
+          <line
+            key={day}
+            x1={xForDay(day)}
+            x2={xForDay(day)}
+            y1={geometry.top}
+            y2={geometry.height - geometry.bottom}
+            stroke="rgba(148, 163, 184, 0.08)"
+            strokeDasharray="4 10"
+          />
+        ))}
+
+        <rect
+          x={selectionLeft}
+          y={geometry.top}
+          width={selectionWidth}
+          height={geometry.usableHeight}
+          fill={rgba(lineColor, 0.12)}
+          stroke={rgba(lineColor, 0.32)}
+          rx="12"
+        />
+
+        <line
+          x1={geometry.left}
+          x2={geometry.width - geometry.right}
+          y1={yForValue(0)}
+          y2={yForValue(0)}
+          stroke="rgba(214, 226, 246, 0.24)"
+          strokeDasharray="3 4"
+        />
+
+        <path d={fillPath} fill="url(#ivq-seasonality-fill)" />
+        <path d={path} fill="none" stroke={lineColor} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+
+        <circle cx={selectionLeft} cy={yForValue(points[Math.max(0, effectiveRangeStart - 1)]?.value ?? 0)} r="4.5" fill={lineColor} />
+        <circle cx={selectionRight} cy={yForValue(points[Math.max(0, effectiveRangeEnd - 1)]?.value ?? 0)} r="4.5" fill={lineColor} />
+
+        <g transform={`translate(${geometry.left + 4}, ${geometry.top + 12})`}>
+          <rect width="208" height="48" rx="12" fill="rgba(7, 14, 26, 0.84)" stroke="rgba(148, 163, 184, 0.16)" />
+          <text x="12" y="18" fill="#cbd5e1" fontSize="11" fontWeight="700" letterSpacing="1.4">
+            RANGE
+          </text>
+          <text x="12" y="34" fill="#f8fafc" fontSize="13" fontWeight="700">
+            {monthLabel(effectiveRangeStart)} - {monthLabel(effectiveRangeEnd)}
+          </text>
+          <text x="12" y="45" fill="#93a3b8" fontSize="10">
+            Hold {Math.max(1, effectiveRangeEnd - effectiveRangeStart)} Tage
+          </text>
+        </g>
+      </svg>
     </div>
   );
 }

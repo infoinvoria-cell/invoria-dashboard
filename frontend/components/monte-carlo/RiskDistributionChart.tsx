@@ -24,6 +24,7 @@ type Props = {
   esHistorical: number;
   esParametric: number;
   confidenceLabel: string;
+  animationProgress: number;
 };
 
 function formatPercent(value: number): string {
@@ -38,9 +39,11 @@ export default function RiskDistributionChart({
   esHistorical,
   esParametric,
   confidenceLabel,
+  animationProgress,
 }: Props) {
   const palette = getMonteCarloPalette(theme);
-  const histogramData = histogram.map((bin) => ({
+  const visibleBins = histogram.slice(0, Math.max(2, Math.round(histogram.length * Math.max(0.05, animationProgress))));
+  const histogramData = visibleBins.map((bin) => ({
     ...bin,
     tailMark: bin.isVarTail ? bin.count : null,
   }));

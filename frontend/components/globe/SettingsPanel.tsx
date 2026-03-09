@@ -14,6 +14,7 @@ type Props = {
   onToggleCategory: (category: string) => void;
   onAllOn: () => void;
   onAllOff: () => void;
+  onRefreshData?: () => void;
   overlayState: OverlayToggleState;
   overlayLoadingState?: Partial<Record<keyof OverlayToggleState, boolean>>;
   onToggleOverlay: (key: keyof OverlayToggleState) => void;
@@ -90,11 +91,6 @@ const OVERLAY_OPTIONS_CORE: OverlayOption[] = [
     description: "Maps container shipping traffic between major global ports.",
   },
   {
-    key: "commodityInfrastructure",
-    label: "Infrastructure",
-    description: "Displays mines, pipelines, LNG terminals and strategic energy hubs on both maps.",
-  },
-  {
     key: "commodityRegions",
     label: "Commodity Regions",
     description: "Highlights major production regions for key global commodities.",
@@ -140,6 +136,7 @@ export function SettingsPanel({
   onToggleCategory,
   onAllOn,
   onAllOff,
+  onRefreshData,
   overlayState,
   overlayLoadingState,
   onToggleOverlay,
@@ -399,6 +396,19 @@ export function SettingsPanel({
         >
           All Off
         </button>
+        {onRefreshData ? (
+          <button
+            type="button"
+            onClick={onRefreshData}
+            className={`h-7 rounded-md border bg-transparent px-2 text-[10px] font-semibold transition ${
+              goldThemeEnabled
+                ? "border-[#d6b24a]/58 text-[#fff3d1] hover:border-[#d6b24a]/85"
+                : "border-[#2962ff]/58 text-[#dce8ff] hover:border-[#2962ff]/85"
+            }`}
+          >
+            Refresh
+          </button>
+        ) : null}
       </div>
 
       <div className="scroll-thin min-h-0 flex-1 overflow-y-auto pr-0.5">

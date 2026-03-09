@@ -38,7 +38,7 @@ import type {
 
 const CandleChart = lazy(() => import("./globe/charts/CandleChart"));
 const EvaluationChart = lazy(() => import("./globe/charts/EvaluationChart"));
-const SeasonalityChart = lazy(() => import("./globe/charts/SeasonalityChart"));
+const GlobeSeasonalityChart = lazy(() => import("./globe/charts/GlobeSeasonalityChart"));
 const ASSET_USAGE_STORAGE_KEY = "ivq_globe_asset_usage_v1";
 const DATA_SOURCE_STORAGE_KEY = "ivq_globe_data_source_v2";
 const GOLD_THEME_STORAGE_KEY = "ivq_globe_gold_theme_v1";
@@ -53,7 +53,6 @@ const ALLOWED_OVERLAYS: OverlayMode[] = [
   "ship_tracking",
   "oil_routes",
   "container_traffic",
-  "commodity_infrastructure",
   "commodity_regions",
   "global_risk_layer",
   "global_liquidity_map",
@@ -69,7 +68,6 @@ const OVERLAY_CACHE_MS: Record<keyof OverlayToggleState, number> = {
   shipTracking: 5 * 60 * 1000,
   oilRoutes: 3 * 60 * 60 * 1000,
   containerTraffic: 3 * 60 * 60 * 1000,
-  commodityInfrastructure: 6 * 60 * 60 * 1000,
   commodityRegions: 24 * 60 * 60 * 1000,
   globalRiskLayer: 3 * 60 * 60 * 1000,
   globalLiquidityMap: 60 * 60 * 1000,
@@ -78,7 +76,7 @@ const OVERLAY_CACHE_MS: Record<keyof OverlayToggleState, number> = {
   regionalAssetHighlight: 2 * 60 * 60 * 1000,
 };
 const MARKET_CACHE_MS = 40 * 60 * 1000;
-const NEWS_CACHE_MS = 5 * 60 * 1000;
+const NEWS_CACHE_MS = 10 * 60 * 1000;
 const VALUATION_CACHE_MS = 40 * 60 * 1000;
 const SEASONALITY_CACHE_MS = 10 * 365 * 24 * 60 * 60 * 1000;
 const SHELL_REFRESH_MS = 40 * 60 * 1000;
@@ -94,7 +92,6 @@ const OVERLAY_ACTIVATION_PRIORITY: Array<keyof OverlayToggleState> = [
   "shipTracking",
   "oilRoutes",
   "containerTraffic",
-  "commodityInfrastructure",
   "commodityRegions",
   "earthquakes",
   "conflicts",
@@ -116,7 +113,6 @@ const DEFAULT_OVERLAY_STATE: OverlayToggleState = {
   shipTracking: false,
   oilRoutes: false,
   containerTraffic: false,
-  commodityInfrastructure: false,
   commodityRegions: false,
   globalRiskLayer: false,
   globalLiquidityMap: false,
@@ -132,7 +128,6 @@ const OVERLAY_LOADING_KEYS: Array<keyof OverlayToggleState> = [
   "shipTracking",
   "oilRoutes",
   "containerTraffic",
-  "commodityInfrastructure",
   "commodityRegions",
   "globalRiskLayer",
   "globalLiquidityMap",
@@ -148,7 +143,6 @@ const OVERLAY_LOADING_LABELS: Record<keyof OverlayToggleState, string> = {
   shipTracking: "Loading ship tracking...",
   oilRoutes: "Loading oil routes...",
   containerTraffic: "Loading container traffic...",
-  commodityInfrastructure: "Loading commodity infrastructure...",
   commodityRegions: "Loading commodity regions...",
   globalRiskLayer: "Loading risk layer...",
   globalLiquidityMap: "Loading liquidity map...",
@@ -193,6 +187,19 @@ function clampNum(v: number, lo: number, hi: number): number {
 function finiteOr(value: unknown, fallback: number): number {
   const n = Number(value);
   return Number.isFinite(n) ? n : fallback;
+}
+
+function currentUtcDayOfYear(): number {
+  const now = new Date();
+  const start = Date.UTC(now.getUTCFullYear(), 0, 1);
+  const current = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  return Math.floor((current - start) / 86_400_000) + 1;
+}
+
+function formatSeasonDay(day: number): string {
+  const base = new Date(Date.UTC(2024, 0, 1));
+  base.setUTCDate(Math.max(1, Math.min(366, Math.round(day))));
+  return base.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", timeZone: "UTC" });
 }
 
 function hexToRgb(hex: string): [number, number, number] {
@@ -249,7 +256,6 @@ function mapOverlayKeyToMode(key: keyof OverlayToggleState): OverlayMode {
   if (key === "shipTracking") return "ship_tracking";
   if (key === "oilRoutes") return "oil_routes";
   if (key === "containerTraffic") return "container_traffic";
-  if (key === "commodityInfrastructure") return "commodity_infrastructure";
   if (key === "commodityRegions") return "commodity_regions";
   if (key === "globalRiskLayer") return "global_risk_layer";
   if (key === "globalLiquidityMap") return "global_liquidity_map";
@@ -288,7 +294,6 @@ export default function App() {
     if (initialOverlay === "ship_tracking") base.shipTracking = true;
     if (initialOverlay === "oil_routes") base.oilRoutes = true;
     if (initialOverlay === "container_traffic") base.containerTraffic = true;
-    if (initialOverlay === "commodity_infrastructure") base.commodityInfrastructure = true;
     if (initialOverlay === "commodity_regions") base.commodityRegions = true;
     if (initialOverlay === "global_risk_layer") base.globalRiskLayer = true;
     if (initialOverlay === "global_liquidity_map") base.globalLiquidityMap = true;
@@ -356,7 +361,6 @@ export default function App() {
   const [conflictEvents, setConflictEvents] = useState<GeoEventItem[]>([]);
   const [wildfireEvents, setWildfireEvents] = useState<GeoEventItem[]>([]);
   const [earthquakeEvents, setEarthquakeEvents] = useState<GeoEventItem[]>([]);
-  const [infrastructureEvents, setInfrastructureEvents] = useState<GeoEventItem[]>([]);
   const [shipTracking, setShipTracking] = useState<ShipTrackingItem[]>([]);
   const [oilRoutes, setOilRoutes] = useState<OverlayRouteItem[]>([]);
   const [containerRoutes, setContainerRoutes] = useState<OverlayRouteItem[]>([]);
@@ -369,11 +373,11 @@ export default function App() {
   const [regionHighlight, setRegionHighlight] = useState<AssetRegionHighlightResponse | null>(null);
   const [recentSignal, setRecentSignal] = useState<RecentSignal>(null);
   const [deferredSections, setDeferredSections] = useState<DeferredSections>({
-    news: false,
-    valuation: false,
-    seasonality: false,
+    news: true,
+    valuation: true,
+    seasonality: true,
     heatmap: false,
-    macro: false,
+    macro: true,
   });
   const sharedTimeRangeRef = useRef<SharedTimeRange | null>(null);
   const panelCacheRef = useRef<Record<string, {
@@ -920,15 +924,14 @@ export default function App() {
     const jobs: Array<Promise<void>> = [];
 
     const loadLayer = (
-      key: "conflicts" | "wildfires" | "earthquakes" | "commodityInfrastructure",
-      mode: "conflicts" | "wildfires" | "earthquakes" | "infrastructure",
+      key: "conflicts" | "wildfires" | "earthquakes",
       setter: (rows: GeoEventItem[]) => void,
     ) => {
       if (!overlayState[key]) return;
-      const stampKey = `geo:${mode}`;
+      const stampKey = `geo:${key}`;
       if (!isStale(overlayLastUpdatedAtRef.current[stampKey], overlayCacheMs(key))) return;
       jobs.push(
-        withOverlayLoad(key, GlobeApi.getGeoEvents(mode)
+        withOverlayLoad(key, GlobeApi.getGeoEvents(key)
           .then((res) => {
             if (cancelled) return;
             setter(res.items ?? []);
@@ -1088,10 +1091,9 @@ export default function App() {
       }
     }
 
-    loadLayer("conflicts", "conflicts", setConflictEvents);
-    loadLayer("wildfires", "wildfires", setWildfireEvents);
-    loadLayer("earthquakes", "earthquakes", setEarthquakeEvents);
-    loadLayer("commodityInfrastructure", "infrastructure", setInfrastructureEvents);
+    loadLayer("conflicts", setConflictEvents);
+    loadLayer("wildfires", setWildfireEvents);
+    loadLayer("earthquakes", setEarthquakeEvents);
 
     if (jobs.length) {
       Promise.allSettled(jobs).catch(() => {
@@ -1106,7 +1108,6 @@ export default function App() {
     overlayState.commodityStressMap,
     overlayState.commodityRegions,
     overlayState.conflicts,
-    overlayState.commodityInfrastructure,
     overlayState.containerTraffic,
     overlayState.earthquakes,
     overlayState.globalLiquidityMap,
@@ -1125,14 +1126,11 @@ export default function App() {
     if (overlayState.conflicts) merged.push(...conflictEvents);
     if (overlayState.wildfires) merged.push(...wildfireEvents);
     if (overlayState.earthquakes) merged.push(...earthquakeEvents);
-    if (overlayState.commodityInfrastructure) merged.push(...infrastructureEvents);
     if (overlayState.shippingDisruptions) merged.push(...shippingDisruptionEvents);
     setGeoEvents(merged);
   }, [
     conflictEvents,
     earthquakeEvents,
-    infrastructureEvents,
-    overlayState.commodityInfrastructure,
     overlayState.conflicts,
     overlayState.earthquakes,
     overlayState.shippingDisruptions,
@@ -1206,16 +1204,6 @@ export default function App() {
           .then((res) => {
             setEarthquakeEvents(res.items ?? []);
             overlayLastUpdatedAtRef.current["geo:earthquakes"] = Date.now();
-          }))
-          .catch(() => {
-            // no-op
-          });
-      }
-      if (overlayState.commodityInfrastructure && isStale(overlayLastUpdatedAtRef.current["geo:infrastructure"], overlayCacheMs("commodityInfrastructure"))) {
-        withOverlayLoad("commodityInfrastructure", GlobeApi.getGeoEvents("infrastructure")
-          .then((res) => {
-            setInfrastructureEvents(res.items ?? []);
-            overlayLastUpdatedAtRef.current["geo:infrastructure"] = Date.now();
           }))
           .catch(() => {
             // no-op
@@ -1334,7 +1322,6 @@ export default function App() {
     deferredSections.valuation,
     overlayState.commodityStressMap,
     overlayState.conflicts,
-    overlayState.commodityInfrastructure,
     overlayState.containerTraffic,
     overlayState.commodityRegions,
     overlayState.earthquakes,
@@ -1356,7 +1343,6 @@ export default function App() {
     overlayState.commodityStressMap,
     overlayState.commodityRegions,
     overlayState.conflicts,
-    overlayState.commodityInfrastructure,
     overlayState.containerTraffic,
     overlayState.earthquakes,
     overlayState.globalLiquidityMap,
@@ -1550,6 +1536,29 @@ export default function App() {
     setEnabledAssets([]);
   }, []);
 
+  const onRefreshData = useCallback(() => {
+    globalNewsCacheRef.current = null;
+    panelCacheRef.current = {};
+    overlayLastUpdatedAtRef.current = {};
+    assetRegionCacheRef.current = {};
+    GlobeApi.clearCache();
+    refreshShellData(true).catch(() => {
+      // no-op
+    });
+    if (selectedAssetId) {
+      loadPanelData(selectedAssetId, dataSource, {
+        force: true,
+        forceTimeseriesRefresh: true,
+        includeEvaluation: deferredSections.valuation,
+        includeSeasonality: deferredSections.seasonality,
+        includeAssetNews: deferredSections.news,
+        includeSignalDetail: deferredSections.valuation,
+      }).catch(() => {
+        // no-op
+      });
+    }
+  }, [dataSource, deferredSections.news, deferredSections.seasonality, deferredSections.valuation, loadPanelData, refreshShellData, selectedAssetId]);
+
   const onToggleOverlay = useCallback((key: keyof OverlayToggleState) => {
     setOverlayState((prev) => ({ ...prev, [key]: !prev[key] }));
   }, []);
@@ -1678,6 +1687,41 @@ export default function App() {
     const curve = normalizedSeasonalityCurve(seasonality).map((point) => Number(point.y));
     return buildMiniSparkPaths(curve);
   }, [seasonality]);
+  const currentSeasonPattern = useMemo(() => {
+    const rawCurve = (seasonality?.curve ?? [])
+      .map((point) => ({
+        day: Math.max(1, Math.min(366, Math.round(Number(point.x) + 1))),
+        value: Number(point.y),
+      }))
+      .filter((point) => Number.isFinite(point.value))
+      .sort((left, right) => left.day - right.day);
+    const holdDays = Math.max(10, Math.min(20, Math.round(finiteOr(seasonHorizon, 12))));
+    const today = currentUtcDayOfYear();
+
+    if (!rawCurve.length) {
+      return {
+        label: "--",
+        holdLabel: `${holdDays} Tage`,
+        direction: seasonDirection,
+        avgReturnPct: finiteOr(avgReturn, 0),
+      };
+    }
+
+    let startIndex = rawCurve.findIndex((point) => point.day >= today);
+    if (startIndex < 0) startIndex = Math.max(0, rawCurve.length - 1);
+    const endIndex = Math.min(rawCurve.length - 1, startIndex + holdDays);
+    const startPoint = rawCurve[startIndex];
+    const endPoint = rawCurve[endIndex];
+    const delta = finiteOr(endPoint?.value, 0) - finiteOr(startPoint?.value, 0);
+    const direction = delta >= 0 ? "LONG" as const : "SHORT" as const;
+
+    return {
+      label: `${formatSeasonDay(startPoint?.day ?? today)} - ${formatSeasonDay(endPoint?.day ?? Math.min(366, today + holdDays))}`,
+      holdLabel: `${Math.max(1, (endPoint?.day ?? (today + holdDays)) - (startPoint?.day ?? today))} Tage`,
+      direction,
+      avgReturnPct: delta,
+    };
+  }, [avgReturn, seasonDirection, seasonHorizon, seasonality]);
   const seasonHorizonLabel = `${Math.max(10, Math.min(20, Math.round(finiteOr(seasonHorizon, 12))))} Tage`;
   const avgReturnLabel = `${finiteOr(avgReturn, 0).toFixed(2)}%`;
   const hitRateLabel = `${hitRate.toFixed(0)}%`;
@@ -1696,6 +1740,9 @@ export default function App() {
   const seasonColor = seasonBaseColor;
   const sharpeColor = colorizeRiskMetric(seasonSharpe);
   const seasonStateLabel = seasonDirection === "LONG" ? "Bullish" : "Bearish";
+  const currentPatternColor = currentSeasonPattern.direction === "LONG" ? "#39ff40" : "#ff384c";
+  const currentPatternStateLabel = currentSeasonPattern.direction === "LONG" ? "Bullish" : "Bearish";
+  const currentPatternReturnLabel = `${finiteOr(currentSeasonPattern.avgReturnPct, 0) >= 0 ? "+" : ""}${finiteOr(currentSeasonPattern.avgReturnPct, 0).toFixed(2)}%`;
   const chartHeaderLabel = useMemo(() => {
     if (!selectedAsset) return "Asset";
     if (selectedAsset.id === "dax40") return "DAX 40";
@@ -1759,6 +1806,7 @@ export default function App() {
                       onToggleCategory={onToggleCategory}
                       onAllOn={onAllOn}
                       onAllOff={onAllOff}
+                      onRefreshData={onRefreshData}
                       overlayState={overlayState}
                       overlayLoadingState={overlayLoadingState}
                       onToggleOverlay={onToggleOverlay}
@@ -1837,7 +1885,7 @@ export default function App() {
               </div>
             ) : (
               <div className={`grid ${globeGridLayoutClass} gap-4`} style={globeGridLayoutStyle}>
-                <div className="order-2 min-h-0 min-[769px]:row-span-2">
+                <div className="min-h-0 min-[769px]:row-span-2">
                   <SettingsPanel
                     assets={assets}
                     enabledSet={enabledSet}
@@ -1849,13 +1897,14 @@ export default function App() {
                     onToggleCategory={onToggleCategory}
                     onAllOn={onAllOn}
                     onAllOff={onAllOff}
+                    onRefreshData={onRefreshData}
                     overlayState={overlayState}
                     overlayLoadingState={overlayLoadingState}
                     onToggleOverlay={onToggleOverlay}
                   />
                 </div>
 
-                <div className="glass-panel glass-panel--flush relative order-1 min-h-[320px] overflow-hidden rounded-xl min-[769px]:order-none min-[769px]:min-h-0">
+                <div className="glass-panel glass-panel--flush relative min-h-[320px] overflow-hidden rounded-xl min-[769px]:min-h-0">
                   <div className="ivq-globe-hover-controls absolute right-3 top-3 z-30">
                     <button
                       type="button"
@@ -1902,7 +1951,7 @@ export default function App() {
                   />
                 </div>
 
-                <div className="order-3 min-h-[180px] min-[769px]:order-none min-[769px]:min-h-0">
+                <div className="min-h-[180px] min-[769px]:min-h-0">
                   <MiniWorldMap
                     markers={visibleMarkers}
                     selectedAssetId={selectedAssetId}
@@ -2025,22 +2074,29 @@ export default function App() {
           >
             <div className="ivq-section-label">Seasonality</div>
             <div className="grid min-h-0 flex-1 grid-cols-1 gap-3.5 overflow-hidden min-[769px]:grid-cols-[minmax(0,1fr)_176px]">
-              <div className="ivq-subpanel relative h-full min-h-0 overflow-hidden rounded-md p-[2px]">
-                <div className="h-full min-h-0">
-                  <Suspense fallback={<div className="grid h-full place-items-center text-xs text-slate-400">Loading seasonality...</div>}>
-                    <SeasonalityChart payload={seasonality} loopReplayTick={visualLoopEnabled ? visualLoopTick : 0} />
-                  </Suspense>
+                <div className="ivq-subpanel relative h-full min-h-0 overflow-hidden rounded-md p-[2px]">
+                  <div className="h-full min-h-0">
+                    <Suspense fallback={<div className="grid h-full place-items-center text-xs text-slate-400">Loading seasonality...</div>}>
+                      <GlobeSeasonalityChart payload={seasonality} loopReplayTick={visualLoopEnabled ? visualLoopTick : 0} />
+                    </Suspense>
+                  </div>
                 </div>
-              </div>
               <div className="grid h-full min-h-0 grid-cols-2 gap-2.5 text-[10px] min-[769px]:grid-cols-1 min-[769px]:grid-rows-[repeat(5,minmax(0,1fr))]">
                 <div className="ivq-subpanel min-h-0 overflow-hidden p-2.5">
-                  <div className="mb-1 text-[#b2c5de]">Haltedauer</div>
+                  <div className="mb-1 text-[#b2c5de]">Current Pattern</div>
                   <div className="flex items-center justify-between gap-2">
-                    <div className="min-w-[72px] text-[14px] font-semibold" style={{ color: seasonColor }}>{seasonHorizonLabel}</div>
-                    <span className="text-[10px] font-semibold text-slate-300">{seasonStateLabel}</span>
+                    <div className="min-w-0">
+                      <div className="truncate text-[13px] font-semibold" style={{ color: currentPatternColor }}>
+                        {currentSeasonPattern.label}
+                      </div>
+                      <div className="mt-1 text-[10px] font-semibold" style={{ color: currentPatternColor }}>
+                        {currentPatternStateLabel} · {currentPatternReturnLabel}
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-semibold text-slate-300">{currentSeasonPattern.holdLabel}</span>
                   </div>
                   <div className="mt-1 h-1 rounded-full bg-slate-700/45">
-                    <div className="h-1 rounded-full" style={{ width: `${Math.max(0, Math.min(100, (finiteOr(seasonHorizon, 12) - 10) * 10))}%`, backgroundColor: seasonColor }} />
+                    <div className="h-1 rounded-full" style={{ width: `${Math.max(0, Math.min(100, (finiteOr(seasonHorizon, 12) - 10) * 10))}%`, backgroundColor: currentPatternColor }} />
                   </div>
                 </div>
                 <div className="ivq-subpanel min-h-0 overflow-hidden p-2.5">
@@ -2253,6 +2309,3 @@ export default function App() {
     </main>
   );
 }
-
-
-

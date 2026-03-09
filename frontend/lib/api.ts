@@ -20,6 +20,7 @@ import type {
   NewsTranslationResponse,
   OpportunitiesResponse,
   PolicyRateResponse,
+  RiskResponse,
   SeasonalityResponse,
   ShippingDisruptionsResponse,
   ShipTrackingResponse,
@@ -33,7 +34,7 @@ const loadingLabels = new Map<number, string>();
 const loadingListeners = new Set<(state: ApiLoadingSnapshot) => void>();
 let loadingRequestSeq = 0;
 const MARKET_CACHE_MS = 40 * 60 * 1000;
-const NEWS_CACHE_MS = 5 * 60 * 1000;
+const NEWS_CACHE_MS = 10 * 60 * 1000;
 const VALUATION_CACHE_MS = 40 * 60 * 1000;
 const SEASONALITY_CACHE_MS = 10 * 365 * 24 * 60 * 60 * 1000;
 
@@ -48,8 +49,6 @@ function labelForUrl(url: string): string {
   if (u.includes("/events/earthquakes")) return "Loading earthquakes...";
   if (u.includes("/events/wildfires")) return "Loading wildfires...";
   if (u.includes("/events/conflicts")) return "Loading conflicts...";
-  if (u.includes("/events/infrastructure") || u.includes("layer=infrastructure")) return "Loading commodity infrastructure...";
-  if (u.includes("/events/intelligence") || u.includes("layer=intelligence")) return "Loading intelligence overlay...";
   if (u.includes("/overlay/ships")) return "Loading ship tracking...";
   if (u.includes("/overlay/global_liquidity")) return "Loading liquidity map...";
   if (u.includes("/overlay/global_risk")) return "Loading risk layer...";
@@ -181,6 +180,17 @@ function heatmapCorrelationTtlMs(timeframe: string): number {
 }
 
 export const GlobeApi = {
+  clearCache(predicate?: (key: string) => boolean): void {
+    if (!predicate) {
+      cache.clear();
+      return;
+    }
+    for (const key of Array.from(cache.keys())) {
+      if (predicate(key)) {
+        cache.delete(key);
+      }
+    }
+  },
   getAssets(): Promise<AssetsResponse> {
     return fetchJson<AssetsResponse>(endpoint("/api/assets"), 60 * 60 * 1000);
   },
@@ -207,10 +217,11 @@ export const GlobeApi = {
     const src = encodeURIComponent(String(source || "dukascopy").toLowerCase());
     return fetchJson<EvaluationResponse>(endpoint(`/api/asset/${assetId}/evaluation?v=6&source=${src}`), VALUATION_CACHE_MS);
   },
-  getSeasonality(assetId: string, source = "tradingview"): Promise<SeasonalityResponse> {
+  getSeasonality(assetId: string, source = "tradingview", years = 10): Promise<SeasonalityResponse> {
     // version tag avoids stale in-memory cache collisions during active UI/data iterations
     const src = encodeURIComponent(String(source || "dukascopy").toLowerCase());
-    return fetchJson<SeasonalityResponse>(endpoint(`/api/asset/${assetId}/seasonality?v=2&source=${src}`), SEASONALITY_CACHE_MS);
+    const yearsParam = encodeURIComponent(String(Math.max(10, Math.floor(Number(years) || 10))));
+    return fetchJson<SeasonalityResponse>(endpoint(`/api/asset/${assetId}/seasonality?v=3&source=${src}&years=${yearsParam}`), SEASONALITY_CACHE_MS);
   },
   getGlobalNews(): Promise<NewsResponse> {
     return fetchJson<NewsResponse>(endpoint("/api/news/global"), NEWS_CACHE_MS);
@@ -220,6 +231,9 @@ export const GlobeApi = {
   },
   getInflation(): Promise<InflationResponse> {
     return fetchJson<InflationResponse>(endpoint("/api/macro/inflation"), 10 * 60 * 1000);
+  },
+  getRisk(): Promise<RiskResponse> {
+    return fetchJson<RiskResponse>(endpoint("/api/macro/risk"), 10 * 60 * 1000);
   },
   getPolicyRateMap(): Promise<PolicyRateResponse> {
     return fetchJson<PolicyRateResponse>(endpoint("/api/macro/policy_rate"), 10 * 60 * 1000);
@@ -253,6 +267,12 @@ export const GlobeApi = {
     const src = encodeURIComponent(String(source || "dukascopy").toLowerCase());
     return fetchJson<AssetSignalDetailResponse>(endpoint(`/api/asset/${assetId}/signal_detail?source=${src}`), VALUATION_CACHE_MS);
   },
+  getReferenceTimeseries(symbol: string, timeframe = "D", source = "tradingview"): Promise<TimeseriesResponse> {
+    const ref = encodeURIComponent(String(symbol || "").trim());
+    const tf = encodeURIComponent(String(timeframe || "D").toUpperCase());
+    const src = encodeURIComponent(String(source || "dukascopy").toLowerCase());
+    return fetchJson<TimeseriesResponse>(endpoint(`/api/reference/timeseries?symbol=${ref}&tf=${tf}&source=${src}`), MARKET_CACHE_MS);
+  },
   getAlerts(source = "tradingview"): Promise<AlertsResponse> {
     const src = encodeURIComponent(String(source || "dukascopy").toLowerCase());
     return fetchJson<AlertsResponse>(endpoint(`/api/alerts?source=${src}`), 5 * 60 * 1000);
@@ -270,12 +290,6 @@ export const GlobeApi = {
     }
     if (mode === "news_geo") {
       return fetchJson<GeoEventsResponse>(endpoint("/api/events/news_geo"), 10 * 60 * 1000);
-    }
-    if (mode === "infrastructure") {
-      return fetchJson<GeoEventsResponse>(endpoint("/api/events/infrastructure"), 6 * 60 * 60 * 1000);
-    }
-    if (mode === "intelligence") {
-      return fetchJson<GeoEventsResponse>(endpoint("/api/events/intelligence"), 10 * 60 * 1000);
     }
     const encoded = encodeURIComponent(mode);
     return fetchJson<GeoEventsResponse>(endpoint(`/api/geo/events?layer=${encoded}`), 10 * 60 * 1000);

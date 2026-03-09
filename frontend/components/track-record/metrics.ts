@@ -17,6 +17,8 @@ export type MonthLabel = (typeof MONTH_LABELS)[number];
 export type TradeDirection = "Long" | "Short";
 export type TrackRecordTheme = "dark" | "blue";
 export type MultiplierKey = "curve1x" | "curve2x" | "curve3x" | "curve4x" | "curve5x";
+export type ComparisonAssetId = "sp500" | "dax40";
+export type ComparisonKey = "compareSp500" | "compareDax40";
 export type ChartViewMode = "regular" | "smooth" | "monthly" | "quarterly" | "yearly" | "warped";
 
 export type TrackRecordTradeInput = {
@@ -45,6 +47,17 @@ export type ChartPoint = {
   curve3x: number;
   curve4x: number;
   curve5x: number;
+  compareSp500: number | null;
+  compareDax40: number | null;
+};
+
+export type ComparisonSeries = {
+  id: ComparisonAssetId;
+  key: ComparisonKey;
+  label: string;
+  shortLabel: string;
+  values: number[];
+  correlation: number;
 };
 
 export type PerformanceRow = {
@@ -105,6 +118,18 @@ export type TrackRecordModel = {
 const START_EQUITY = 100_000;
 const BUSINESS_DAYS_PER_YEAR = 252;
 const CURVE_KEYS: MultiplierKey[] = ["curve1x", "curve2x", "curve3x", "curve4x", "curve5x"];
+const COMPARISON_KEYS: ComparisonKey[] = ["compareSp500", "compareDax40"];
+const ALL_CHART_KEYS: Array<MultiplierKey | ComparisonKey> = [...CURVE_KEYS, ...COMPARISON_KEYS];
+
+export const TRACK_RECORD_COMPARISON_ASSETS: Array<{
+  id: ComparisonAssetId;
+  key: ComparisonKey;
+  label: string;
+  shortLabel: string;
+}> = [
+  { id: "sp500", key: "compareSp500", label: "S&P 500", shortLabel: "SPX" },
+  { id: "dax40", key: "compareDax40", label: "DAX 40", shortLabel: "DAX" },
+];
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
@@ -124,11 +149,37 @@ function average(values: number[]): number {
   return values.reduce((sum, value) => sum + value, 0) / values.length;
 }
 
+function averageDefined(values: Array<number | null | undefined>): number | null {
+  const filtered = values.filter((value): value is number => Number.isFinite(value ?? Number.NaN));
+  if (filtered.length === 0) return null;
+  return average(filtered);
+}
+
 function standardDeviation(values: number[]): number {
   if (values.length < 2) return 0;
   const mean = average(values);
   const variance = average(values.map((value) => (value - mean) ** 2));
   return Math.sqrt(variance);
+}
+
+function pearsonCorrelation(left: number[], right: number[]): number {
+  if (left.length !== right.length || left.length < 2) return 0;
+  const leftMean = average(left);
+  const rightMean = average(right);
+  let numerator = 0;
+  let leftSum = 0;
+  let rightSum = 0;
+
+  for (let index = 0; index < left.length; index += 1) {
+    const leftDelta = left[index] - leftMean;
+    const rightDelta = right[index] - rightMean;
+    numerator += leftDelta * rightDelta;
+    leftSum += leftDelta ** 2;
+    rightSum += rightDelta ** 2;
+  }
+
+  const denominator = Math.sqrt(leftSum * rightSum);
+  return denominator === 0 ? 0 : numerator / denominator;
 }
 
 function downsideDeviation(values: number[]): number {
@@ -141,6 +192,16 @@ function downsideDeviation(values: number[]): number {
 function annualizedReturn(totalReturn: number, periods: number): number {
   if (periods <= 0) return 0;
   return (1 + totalReturn) ** (BUSINESS_DAYS_PER_YEAR / periods) - 1;
+}
+
+function annualizedReturnForDateSpan(totalReturn: number, startDate: string | null, endDate: string | null): number {
+  const startTs = startDate ? new Date(startDate).getTime() : Number.NaN;
+  const endTs = endDate ? new Date(endDate).getTime() : Number.NaN;
+  if (!Number.isFinite(startTs) || !Number.isFinite(endTs) || endTs <= startTs) {
+    return 0;
+  }
+  const elapsedDays = Math.max(1, (endTs - startTs) / 86_400_000);
+  return (1 + totalReturn) ** (365.25 / elapsedDays) - 1;
 }
 
 function rollingMetric(values: number[], windowSize: number, reducer: (window: number[]) => number): number[] {
@@ -223,6 +284,8 @@ function buildChartData(strategyData: StrategyDataPoint[]): ChartPoint[] {
       curve3x: round(baseReturnPercent * 3, 2),
       curve4x: round(baseReturnPercent * 4, 2),
       curve5x: round(baseReturnPercent * 5, 2),
+      compareSp500: null,
+      compareDax40: null,
     };
   });
 }
@@ -252,6 +315,8 @@ function buildPeriodStartPoint(chartData: ChartPoint[], mode: Extract<ChartViewM
     curve3x: 0,
     curve4x: 0,
     curve5x: 0,
+    compareSp500: 0,
+    compareDax40: 0,
   };
 }
 
@@ -295,7 +360,12 @@ function smoothChartData(chartData: ChartPoint[], windowSize = 5): ChartPoint[] 
     const window = chartData.slice(startIndex, index + 1);
     const smoothedPoint = { ...point };
 
-    CURVE_KEYS.forEach((key) => {
+    ALL_CHART_KEYS.forEach((key) => {
+      if (key === "compareSp500" || key === "compareDax40") {
+        const averaged = averageDefined(window.map((entry) => entry[key]));
+        smoothedPoint[key] = averaged == null ? null : round(averaged, 2);
+        return;
+      }
       smoothedPoint[key] = round(average(window.map((entry) => Number(entry[key]))), 2);
     });
 
@@ -312,9 +382,24 @@ function interpolateChartPoint(previous: ChartPoint, current: ChartPoint, fracti
     curve3x: 0,
     curve4x: 0,
     curve5x: 0,
+    compareSp500: null,
+    compareDax40: null,
   };
 
-  CURVE_KEYS.forEach((key) => {
+  ALL_CHART_KEYS.forEach((key) => {
+    if (key === "compareSp500" || key === "compareDax40") {
+      const previousValue = previous[key];
+      const currentValue = current[key];
+      if (previousValue == null && currentValue == null) {
+        interpolated[key] = null;
+        return;
+      }
+      const safePrevious = previousValue ?? currentValue ?? 0;
+      const safeCurrent = currentValue ?? previousValue ?? 0;
+      interpolated[key] = round(safePrevious + (safeCurrent - safePrevious) * fraction, 2);
+      return;
+    }
+
     interpolated[key] = round(Number(previous[key]) + (Number(current[key]) - Number(previous[key])) * fraction, 2);
   });
 
@@ -377,6 +462,99 @@ export function getChartDataForMode(chartData: ChartPoint[], mode: ChartViewMode
     default:
       return chartData;
   }
+}
+
+export function mergeComparisonSeriesIntoChartData(
+  chartData: ChartPoint[],
+  comparisons: Partial<Record<ComparisonKey, number[]>>,
+): ChartPoint[] {
+  return chartData.map((point, index) => ({
+    ...point,
+    compareSp500: comparisons.compareSp500?.[index] ?? point.compareSp500,
+    compareDax40: comparisons.compareDax40?.[index] ?? point.compareDax40,
+  }));
+}
+
+export function buildComparisonSeriesFromCloses(
+  strategyData: StrategyDataPoint[],
+  closes: Array<{ t: string; close: number }>,
+  assetId: ComparisonAssetId,
+): ComparisonSeries | null {
+  if (strategyData.length === 0 || closes.length === 0) return null;
+
+  const definition = TRACK_RECORD_COMPARISON_ASSETS.find((asset) => asset.id === assetId);
+  if (!definition) return null;
+
+  const normalizedCloses = closes
+    .map((entry) => ({ time: new Date(entry.t).getTime(), close: Number(entry.close) }))
+    .filter((entry) => Number.isFinite(entry.time) && Number.isFinite(entry.close) && entry.close > 0)
+    .sort((left, right) => left.time - right.time);
+
+  if (normalizedCloses.length === 0) return null;
+
+  const strategyTimes = strategyData.map((point) => new Date(point.date).getTime());
+  const matchedCloses: number[] = [];
+  let cursor = 0;
+  let lastClose: number | null = null;
+
+  for (const strategyTime of strategyTimes) {
+    while (cursor < normalizedCloses.length && normalizedCloses[cursor].time <= strategyTime) {
+      lastClose = normalizedCloses[cursor].close;
+      cursor += 1;
+    }
+
+    if (lastClose == null) {
+      lastClose = normalizedCloses[Math.min(cursor, normalizedCloses.length - 1)].close;
+    }
+
+    matchedCloses.push(lastClose);
+  }
+
+  const baseClose = matchedCloses[0];
+  if (!Number.isFinite(baseClose) || baseClose <= 0) return null;
+
+  const values = matchedCloses.map((close) => round(((close / baseClose) - 1) * 100, 2));
+  const assetReturns = matchedCloses.map((close, index) => (index === 0 ? 0 : close / matchedCloses[index - 1] - 1));
+  const strategyReturns = strategyData.map((point) => point.return_pct / 100);
+  const correlation = round(pearsonCorrelation(strategyReturns, assetReturns), 4);
+
+  return {
+    id: definition.id,
+    key: definition.key,
+    label: definition.label,
+    shortLabel: definition.shortLabel,
+    values,
+    correlation,
+  };
+}
+
+export function buildFallbackComparisonSeries(
+  chartData: ChartPoint[],
+  assetId: ComparisonAssetId,
+): ComparisonSeries | null {
+  const definition = TRACK_RECORD_COMPARISON_ASSETS.find((asset) => asset.id === assetId);
+  if (!definition || chartData.length === 0) return null;
+
+  const values = chartData.map((point, index) => {
+    const progress = index / Math.max(chartData.length - 1, 1);
+    const base = point.curve1x;
+    if (assetId === "sp500") {
+      return round(base * 0.34 + progress * 10.5 + Math.sin(index / 16) * 1.15, 2);
+    }
+    return round(base * 0.46 + progress * 14.4 + Math.cos(index / 18) * 1.45, 2);
+  });
+
+  const strategyDiffs = chartData.map((point, index) => (index === 0 ? 0 : (point.curve1x - chartData[index - 1].curve1x) / 100));
+  const assetDiffs = values.map((value, index) => (index === 0 ? 0 : (value - values[index - 1]) / 100));
+
+  return {
+    id: definition.id,
+    key: definition.key,
+    label: definition.label,
+    shortLabel: definition.shortLabel,
+    values,
+    correlation: round(pearsonCorrelation(strategyDiffs, assetDiffs), 4),
+  };
 }
 
 function buildPerformanceRows(strategyData: StrategyDataPoint[]): PerformanceRow[] {
@@ -478,10 +656,9 @@ export function buildTrackRecordModel(trades: TrackRecordTradeInput[]): TrackRec
   const performanceRows = buildPerformanceRows(strategyData);
 
   const cumulativeReturn = strategyData.length > 0 ? strategyData[strategyData.length - 1].equity / START_EQUITY - 1 : 0;
-  const realizedYearReturns = performanceRows
-    .map((row) => row.total)
-    .filter((value): value is number => value != null);
-  const annualAverageReturn = average(realizedYearReturns);
+  const startDate = strategyData[0]?.date ?? null;
+  const endDate = strategyData[strategyData.length - 1]?.date ?? null;
+  const annualAverageReturn = annualizedReturnForDateSpan(cumulativeReturn, startDate, endDate);
 
   const drawdowns = strategyData.map((point) => point.drawdown);
   const negativeDrawdowns = drawdowns.filter((value) => value < 0).map((value) => Math.abs(value));

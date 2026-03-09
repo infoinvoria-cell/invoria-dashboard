@@ -1,462 +1,485 @@
 "use client";
 
-import { type ReactNode, useEffect, useMemo, useState } from "react";
-import { BarChart3 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 
-import SimpleLineChart from "@/components/charts/SimpleLineChart";
+import { useDashboardStateStore } from "@/components/DashboardStateProvider";
+import DonutChart from "@/components/track-record/DonutChart";
+import KpiCard from "@/components/track-record/KpiCard";
+import PerformanceChart from "@/components/track-record/PerformanceChart";
+import PerformanceTable from "@/components/track-record/PerformanceTable";
+import type { ChartViewMode, ComparisonAssetId, ComparisonSeries, TrackRecordModel, TrackRecordTheme } from "@/components/track-record/metrics";
+import {
+  buildComparisonSeriesFromCloses,
+  buildFallbackComparisonSeries,
+  formatRatio,
+  formatSignedPercent,
+  getMetricRating,
+  getRiskMetricScore,
+  mergeComparisonSeriesIntoChartData,
+  TRACK_RECORD_COMPARISON_ASSETS,
+} from "@/components/track-record/metrics";
+import { getTrackRecordThemePalette } from "@/components/track-record/theme";
 import { GlobeApi } from "@/lib/api";
-import type { TrackRecordCurve, TrackRecordResponse } from "@/types";
 
-const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-function formatDecimalPct(value: number): string {
-  return `${value >= 0 ? "+" : ""}${(value * 100).toFixed(2)}%`;
-}
-
-function formatPercentValue(value: number): string {
-  return `${value.toFixed(1)}%`;
-}
-
-function formatCurrency(value: number): string {
-  return `EUR ${value.toFixed(2)}`;
-}
-
-function cellTone(value: number | null): string {
-  if (value == null) return "text-slate-500";
-  if (value > 0) return "text-emerald-300";
-  if (value < 0) return "text-rose-300";
-  return "text-slate-300";
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max);
-}
-
-function annualStatus(value: number): string {
-  if (value >= 0.2) return "Very strong";
-  if (value >= 0.12) return "Strong";
-  if (value >= 0.05) return "Positive";
-  if (value >= 0) return "Stable";
-  return "Negative";
-}
-
-type DonutSegment = {
-  value: number;
-  color: string;
+type Props = {
+  initialModel: TrackRecordModel;
 };
 
-function DonutGauge({
-  segments,
-  centerValue,
-  centerLabel,
-}: {
-  segments: DonutSegment[];
-  centerValue: string;
-  centerLabel: string;
-}) {
-  const radius = 27;
-  const strokeWidth = 9;
-  const circumference = 2 * Math.PI * radius;
-  const total = Math.max(
-    1,
-    segments.reduce((sum, segment) => sum + Math.max(0, segment.value), 0),
-  );
-  let offset = 0;
-
-  return (
-    <svg viewBox="0 0 84 84" className="h-full w-full overflow-visible">
-      <circle cx="42" cy="36" r={radius} fill="none" stroke="rgba(51,65,85,0.45)" strokeWidth={strokeWidth} />
-      {segments.map((segment, index) => {
-        const normalized = Math.max(0, segment.value);
-        const dash = (normalized / total) * circumference;
-        const currentOffset = offset;
-        offset += dash;
-        return (
-          <circle
-            key={`${segment.color}-${index}`}
-            cx="42"
-            cy="36"
-            r={radius}
-            fill="none"
-            stroke={segment.color}
-            strokeWidth={strokeWidth}
-            strokeLinecap="round"
-            strokeDasharray={`${dash} ${circumference - dash}`}
-            strokeDashoffset={-currentOffset}
-            transform="rotate(-90 42 36)"
-          />
-        );
-      })}
-      <circle cx="42" cy="36" r="17" fill="rgba(7,10,15,0.92)" />
-      <text x="42" y="33" textAnchor="middle" fontSize="11" fontWeight="800" fill="#f8fafc">
-        {centerValue}
-      </text>
-      <text x="42" y="45" textAnchor="middle" fontSize="5.6" fontWeight="700" fill="#94a3b8">
-        {centerLabel}
-      </text>
-    </svg>
-  );
+function formatPercent(value: number): string {
+  return `${(value * 100).toFixed(2)}%`;
 }
 
-function MetricCard({
-  title,
-  value,
-  children,
-}: {
-  title: string;
-  value: string;
-  children: ReactNode;
-}) {
-  return (
-    <article className="relative flex min-h-[182px] flex-col overflow-hidden rounded-[20px] border border-[#20304a] bg-[rgba(7,12,22,0.88)] p-[18px] shadow-[0_18px_40px_rgba(0,0,0,0.28)]">
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.06),transparent_34%),radial-gradient(280px_120px_at_85%_0%,rgba(231,208,122,0.14),transparent_60%)]" />
-      <div className="pointer-events-none absolute inset-x-5 top-0 h-px bg-[rgba(231,208,122,0.16)]" />
-      <div className="relative z-[1] mb-2">
-        <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#d8c78d]">{title}</div>
-        <div className="mt-2 text-[22px] font-semibold leading-none text-slate-100">{value}</div>
-      </div>
-      <div className="relative z-[1] flex min-h-0 flex-1 flex-col">{children}</div>
-    </article>
+export default function TrackRecordPage({ initialModel }: Props) {
+  const dashboardStore = useDashboardStateStore();
+  const persistedState = useMemo(
+    () =>
+      dashboardStore.getPageState<{
+        activeMultipliers?: number[];
+        activeComparisons?: ComparisonAssetId[];
+        chartMode?: ChartViewMode;
+        tableMultiplier?: number;
+      }>("track-record") ?? {},
+    [dashboardStore],
   );
-}
 
-export default function TrackRecordPage() {
-  const [payload, setPayload] = useState<TrackRecordResponse | null>(null);
-  const [selectedCurveId, setSelectedCurveId] = useState("1x");
-  const [loading, setLoading] = useState(true);
+  const [activeMultipliers, setActiveMultipliers] = useState<number[]>(persistedState.activeMultipliers ?? [1]);
+  const [activeComparisons, setActiveComparisons] = useState<ComparisonAssetId[]>(persistedState.activeComparisons ?? []);
+  const [chartMode, setChartMode] = useState<ChartViewMode>(persistedState.chartMode ?? "regular");
+  const [tableMultiplier, setTableMultiplier] = useState<number>(persistedState.tableMultiplier ?? persistedState.activeMultipliers?.[0] ?? 1);
+  const [theme, setTheme] = useState<TrackRecordTheme>("dark");
+  const [comparisonSeries, setComparisonSeries] = useState<ComparisonSeries[]>(
+    () => dashboardStore.getDataCache<ComparisonSeries[]>("track-record:comparisons") ?? [],
+  );
+  const [isRefreshingComparisons, setIsRefreshingComparisons] = useState(false);
+  const palette = getTrackRecordThemePalette(theme);
+  const model = initialModel;
+
+  const tradeOutcomeSegments = useMemo(
+    () => [
+      { label: "Winning", value: model.winningTrades, color: palette.accent },
+      { label: "Losing", value: model.losingTrades, color: theme === "dark" ? "#3a4250" : "#2a3f6a" },
+    ],
+    [model.losingTrades, model.winningTrades, palette.accent, theme],
+  );
+
+  const directionSegments = useMemo(
+    () => [
+      { label: "Long", value: model.longTrades, color: palette.accent },
+      { label: "Short", value: model.shortTrades, color: theme === "dark" ? "#dfe8ff" : "#b8d0ff" },
+    ],
+    [model.longTrades, model.shortTrades, palette.accent, theme],
+  );
 
   useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    GlobeApi.getTrackRecord()
-      .then((response) => {
-        if (cancelled) return;
-        setPayload(response);
-        setSelectedCurveId(response.curves[0]?.id ?? "1x");
-      })
-      .catch(() => {
-        if (!cancelled) setPayload(null);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
+    const readTheme = () => {
+      try {
+        const stored = window.localStorage.getItem("ivq_globe_gold_theme_v1");
+        setTheme(stored === "0" ? "blue" : "dark");
+      } catch {
+        setTheme("dark");
+      }
+    };
+
+    const onThemeEvent = (event: Event) => {
+      const custom = event as CustomEvent<{ theme?: string; themeCanonical?: string }>;
+      const canonical = String(custom.detail?.themeCanonical || "").toLowerCase();
+      const legacy = String(custom.detail?.theme || "").toLowerCase();
+      if (canonical === "blue" || legacy === "blue") {
+        setTheme("blue");
+        return;
+      }
+      if (canonical === "black" || legacy === "black" || legacy === "gold") {
+        setTheme("dark");
+      }
+    };
+
+    readTheme();
+    window.addEventListener("invoria-theme-set", onThemeEvent as EventListener);
     return () => {
-      cancelled = true;
+      window.removeEventListener("invoria-theme-set", onThemeEvent as EventListener);
     };
   }, []);
 
-  const selectedCurve = useMemo<TrackRecordCurve | null>(
-    () => payload?.curves.find((curve) => curve.id === selectedCurveId) ?? payload?.curves[0] ?? null,
-    [payload?.curves, selectedCurveId],
-  );
+  useEffect(() => {
+    let cancelled = false;
 
-  const chartPoints = useMemo(
-    () => (selectedCurve?.points ?? []).map((point) => ({ t: point.t, value: point.value })),
-    [selectedCurve?.points],
-  );
+    const loadComparisons = async () => {
+      if (comparisonSeries.length > 0) return;
+      const results = await Promise.all(
+        TRACK_RECORD_COMPARISON_ASSETS.map(async (asset) => {
+          try {
+            const response = await GlobeApi.getTimeseries(asset.id, "D", "tradingview");
+            return buildComparisonSeriesFromCloses(model.strategyData, response.ohlcv, asset.id);
+          } catch {
+            return buildFallbackComparisonSeries(model.chartData, asset.id);
+          }
+        }),
+      );
 
-  const recentMonths = useMemo(
-    () => [...(payload?.monthlyReturns ?? [])].slice(-18).reverse(),
-    [payload?.monthlyReturns],
-  );
+      if (cancelled) return;
+      const next = results.filter((item): item is ComparisonSeries => item != null);
+      setComparisonSeries(next);
+      dashboardStore.setDataCache("track-record:comparisons", next);
+    };
 
-  const annualAverageReturn = payload?.metrics.annualAverageReturn ?? 0;
-  const annualAverageFillPct = clamp((Math.abs(annualAverageReturn) / 0.3) * 100, 0, 100);
-  const bestAnnualReturn = useMemo(
+    void loadComparisons();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [comparisonSeries.length, dashboardStore, model.chartData, model.strategyData]);
+
+  useEffect(() => {
+    dashboardStore.setPageState("track-record", {
+      activeMultipliers,
+      activeComparisons,
+      chartMode,
+      tableMultiplier,
+    });
+  }, [activeComparisons, activeMultipliers, chartMode, dashboardStore, tableMultiplier]);
+
+  const handleRefreshComparisons = async () => {
+    setIsRefreshingComparisons(true);
+    dashboardStore.clearDataCache("track-record:comparisons");
+    GlobeApi.clearCache((key) => key.includes("/timeseries") && (key.includes("sp500") || key.includes("dax40")));
+    try {
+      const results = await Promise.all(
+        TRACK_RECORD_COMPARISON_ASSETS.map(async (asset) => {
+          try {
+            const response = await GlobeApi.getTimeseries(asset.id, "D", "tradingview", "backadjusted", Math.floor(Date.now() / 60_000));
+            return buildComparisonSeriesFromCloses(model.strategyData, response.ohlcv, asset.id);
+          } catch {
+            return buildFallbackComparisonSeries(model.chartData, asset.id);
+          }
+        }),
+      );
+      const next = results.filter((item): item is ComparisonSeries => item != null);
+      setComparisonSeries(next);
+      dashboardStore.setDataCache("track-record:comparisons", next);
+    } finally {
+      setIsRefreshingComparisons(false);
+    }
+  };
+
+  const chartDataWithComparisons = useMemo(
     () =>
-      Math.max(
-        Number.NEGATIVE_INFINITY,
-        ...(payload?.performanceTable ?? []).map((row) => (row.total == null ? Number.NEGATIVE_INFINITY : row.total)),
+      mergeComparisonSeriesIntoChartData(
+        model.chartData,
+        Object.fromEntries(comparisonSeries.map((series) => [series.key, series.values])) as Record<
+          ComparisonSeries["key"],
+          number[]
+        >,
       ),
-    [payload?.performanceTable],
+    [comparisonSeries, model.chartData],
   );
 
-  const winningTrades = payload?.metrics.winningTrades ?? 0;
-  const losingTrades = payload?.metrics.losingTrades ?? 0;
-  const longTrades = payload?.metrics.longTrades ?? 0;
-  const shortTrades = payload?.metrics.shortTrades ?? 0;
-  const longShortRatio = shortTrades > 0 ? longTrades / shortTrades : 0;
+  const comparisonOptions = useMemo(
+    () =>
+      TRACK_RECORD_COMPARISON_ASSETS.map((asset) => {
+        const series = comparisonSeries.find((entry) => entry.id === asset.id);
+        return {
+          id: asset.id,
+          key: asset.key,
+          label: asset.label,
+          shortLabel: asset.shortLabel,
+          correlation: series?.correlation ?? 0,
+          isLoaded: Boolean(series),
+        };
+      }),
+    [comparisonSeries],
+  );
+
+  const headlineCards = useMemo(
+    () => [
+      {
+        title: "Total Return",
+        value: formatSignedPercent(model.cumulativeReturn),
+        sparkline: model.sparklineSeries.cumulativeReturn,
+        footer: `${model.trades} trades`,
+        tone: "positive" as const,
+      },
+      {
+        title: "Max Drawdown",
+        value: formatSignedPercent(-model.maxDrawdown),
+        sparkline: model.sparklineSeries.drawdownDepth,
+        footer: "Worst peak-to-trough drawdown",
+        tone: "negative" as const,
+      },
+      {
+        title: "Average Drawdown",
+        value: formatSignedPercent(-model.averageDrawdown),
+        sparkline: model.sparklineSeries.averageDrawdown,
+        footer: "Mean active drawdown depth",
+        tone: "negative" as const,
+      },
+      {
+        title: "Average Winning Trade",
+        value: formatSignedPercent(model.averageWinningTrade),
+        sparkline: model.sparklineSeries.rollingAverageWin,
+        footer: "Mean positive trade result",
+        tone: "positive" as const,
+      },
+    ],
+    [model],
+  );
+
+  const annualAverageScore = Math.max(0, Math.min(100, Math.round((Math.abs(model.annualAverageReturn) / 0.4) * 100)));
+
+  const riskCards = useMemo(
+    () =>
+      [
+        {
+          title: "Profit Factor",
+          value: formatRatio(model.profitFactor),
+          score: getRiskMetricScore("profitFactor", model.profitFactor),
+        },
+        {
+          title: "Expectancy",
+          value: formatSignedPercent(model.expectancy),
+          score: getRiskMetricScore("expectancy", model.expectancy),
+        },
+        {
+          title: "Sharpe Ratio",
+          value: formatRatio(model.sharpeRatio),
+          score: getRiskMetricScore("sharpeRatio", model.sharpeRatio),
+        },
+        {
+          title: "Sortino Ratio",
+          value: formatRatio(model.sortinoRatio),
+          score: getRiskMetricScore("sortinoRatio", model.sortinoRatio),
+        },
+        {
+          title: "Calmar Ratio",
+          value: formatRatio(model.calmarRatio),
+          score: getRiskMetricScore("calmarRatio", model.calmarRatio),
+        },
+        {
+          title: "Omega Ratio",
+          value: formatRatio(model.omegaRatio),
+          score: getRiskMetricScore("omegaRatio", model.omegaRatio),
+        },
+      ].map((item) => ({
+        ...item,
+        rating: getMetricRating(item.score),
+      })),
+    [model],
+  );
 
   return (
-    <main className="ivq-terminal-page">
-      <section className="glass-panel ivq-terminal-hero">
-        <div>
-          <div className="ivq-section-label">Track Record</div>
-          <h1 className="ivq-terminal-title">Live performance, KPI diagnostics and yearly return matrix</h1>
-          <p className="ivq-terminal-subtitle">
-            Root dashboard view with the KPI cards fixed for full visibility and the right-side performance diagnostics aligned from the top.
-          </p>
-        </div>
-        <div className="ivq-terminal-hero-meta">
-          <div className="ivq-terminal-pill">
-            {payload?.updatedAt ? `Updated ${new Date(payload.updatedAt).toLocaleString("de-DE")}` : "Waiting for data"}
-          </div>
-        </div>
-      </section>
+    <main className="ivq-terminal-page relative xl:h-[calc(100dvh-50px)] xl:min-h-[calc(100dvh-50px)] xl:overflow-hidden">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[28px]" aria-hidden="true">
+        <div className="absolute inset-0" style={{ background: palette.pageBackground }} />
+        <div
+          className="absolute inset-0 opacity-90"
+          style={{
+            background:
+              theme === "dark"
+                ? "linear-gradient(120deg, rgba(255,255,255,0.05), transparent 22%), radial-gradient(720px 280px at 78% 14%, rgba(214,195,143,0.10), transparent 62%)"
+                : "linear-gradient(120deg, rgba(255,255,255,0.05), transparent 22%), radial-gradient(720px 280px at 78% 14%, rgba(77,135,254,0.12), transparent 62%)",
+          }}
+        />
+      </div>
 
-      <section className="glass-panel">
-        <div className="ivq-section-label">Overview</div>
-        <div className="ivq-stat-grid">
-          <div className="ivq-stat-card">
-            <span className="ivq-stat-label">Final Equity</span>
-            <strong>{payload ? formatCurrency(payload.metrics.finalEquity) : "--"}</strong>
-          </div>
-          <div className="ivq-stat-card">
-            <span className="ivq-stat-label">Total Return</span>
-            <strong className={cellTone((payload?.metrics.totalReturnPct ?? 0) * 100)}>
-              {payload ? formatDecimalPct(payload.metrics.totalReturnPct) : "--"}
-            </strong>
-          </div>
-          <div className="ivq-stat-card">
-            <span className="ivq-stat-label">Max Drawdown</span>
-            <strong className="text-rose-300">{payload ? formatDecimalPct(payload.metrics.maxDrawdown) : "--"}</strong>
-          </div>
-          <div className="ivq-stat-card">
-            <span className="ivq-stat-label">Sharpe</span>
-            <strong>{payload?.metrics.sharpeRatio?.toFixed(2) ?? "--"}</strong>
-          </div>
-          <div className="ivq-stat-card">
-            <span className="ivq-stat-label">Calmar</span>
-            <strong>{payload?.metrics.calmarRatio?.toFixed(2) ?? "--"}</strong>
-          </div>
-        </div>
-      </section>
+      <div className="relative mx-auto flex h-full w-full max-w-[1720px] flex-col gap-4 pt-2" style={{ color: palette.text }}>
+        <div className="grid h-full min-h-0 gap-4 xl:grid-cols-[minmax(0,1.66fr)_minmax(360px,0.92fr)]">
+          <section className="grid min-h-0 gap-4 xl:grid-rows-[minmax(0,1fr)_auto]">
+            <PerformanceChart
+              chartData={chartDataWithComparisons}
+              activeMultipliers={activeMultipliers}
+              onMultiplierChange={setActiveMultipliers}
+              chartMode={chartMode}
+              onChartModeChange={setChartMode}
+              comparisonOptions={comparisonOptions}
+              activeComparisons={activeComparisons}
+              onComparisonChange={setActiveComparisons}
+              theme={theme}
+              onRefreshData={handleRefreshComparisons}
+              isRefreshing={isRefreshingComparisons}
+            />
+            <PerformanceTable
+              rows={model.performanceRows}
+              totalCumulativeReturn={model.cumulativeReturn}
+              activeMultiplier={tableMultiplier}
+              onMultiplierChange={setTableMultiplier}
+              theme={theme}
+            />
+          </section>
 
-      <div className="ivq-terminal-grid ivq-terminal-grid--track xl:items-start">
-        <section className="glass-panel">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <div>
-              <div className="ivq-section-label">Equity Curve</div>
-              <div className="text-lg font-semibold text-slate-100">{selectedCurve?.label ?? "Curve"}</div>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              {(payload?.curves ?? []).map((curve) => (
-                <button
-                  key={curve.id}
-                  type="button"
-                  className={`ivq-segment-btn ${curve.id === selectedCurve?.id ? "is-active" : ""}`}
-                  onClick={() => setSelectedCurveId(curve.id)}
-                >
-                  {curve.label}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="h-[440px]">
-            {loading ? (
-              <div className="grid h-full place-items-center text-sm text-slate-400">Loading performance curve...</div>
-            ) : (
-              <SimpleLineChart
-                points={chartPoints}
-                tone="#e7d07a"
-                fillTone="rgba(231,208,122,0.16)"
-                valueFormatter={(value) => `EUR ${value.toFixed(0)}`}
-              />
-            )}
-          </div>
-        </section>
-
-        <aside className="grid gap-4 xl:self-start">
-          <div className="grid grid-cols-1 gap-3 min-[820px]:grid-cols-2">
-            <MetricCard title="Annual Avg Return" value={payload ? formatDecimalPct(annualAverageReturn) : "--"}>
-              <div className="grid min-h-[116px] grid-cols-[minmax(0,1fr)_92px] items-start gap-3">
-                <div className="min-w-0 space-y-2 pt-1">
-                  <div className="text-[10px] leading-4 text-slate-400">
-                    Compounded yearly average across the realized calendar years.
-                  </div>
-                  <div className="inline-flex rounded-full border border-[#5a4d25] bg-[rgba(231,208,122,0.10)] px-2 py-0.5 text-[8px] font-semibold uppercase tracking-[0.14em] text-[#f6e8bf]">
-                    {annualStatus(annualAverageReturn)}
-                  </div>
-                  <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[9px] leading-[1.2] text-slate-400">
-                    <span>Best year</span>
-                    <span className="text-slate-100">
-                      {Number.isFinite(bestAnnualReturn) ? formatPercentValue(bestAnnualReturn) : "--"}
-                    </span>
-                    <span>Scale</span>
-                    <span className="text-slate-100">0 to 30%</span>
-                  </div>
-                </div>
-                <div className="flex min-h-[116px] items-start justify-end">
-                  <div className="grid grid-cols-[auto_28px] items-start gap-2">
-                    <div className="flex h-[108px] flex-col items-end justify-between pb-0.5 text-[9px] font-semibold text-slate-400">
-                      <span>30%</span>
-                      <span>15%</span>
-                      <span>0%</span>
+          <aside className="grid min-h-0 gap-3 xl:grid-rows-[minmax(0,0.6fr)_minmax(0,0.4fr)]">
+            <div className="grid min-h-0 grid-cols-1 gap-2 min-[769px]:grid-cols-2 xl:auto-rows-fr">
+              <KpiCard
+                title="Annual Avg Return"
+                value={formatSignedPercent(model.annualAverageReturn)}
+                footer="Compounded yearly average"
+                tone={model.annualAverageReturn >= 0 ? "positive" : "negative"}
+                theme={theme}
+              >
+                <div className="grid min-h-[86px] grid-cols-[minmax(0,1fr)_78px] items-start gap-3">
+                  <div className="space-y-1.5 text-[10px] leading-[1.15]" style={{ color: palette.muted }}>
+                    <div>Annualisiert auf 12 Monate</div>
+                    <div className="text-[9px]" style={{ color: palette.heading }}>
+                      Skala 0% bis 40%
                     </div>
-                    <div className="relative h-[108px] w-[28px] overflow-hidden rounded-full border border-[#22324d] bg-[rgba(255,255,255,0.04)]">
-                      <div className="absolute inset-x-[4px] bottom-[35px] border-t border-dashed border-[rgba(231,208,122,0.24)]" />
+                    <div className="text-[9px]" style={{ color: model.annualAverageReturn >= 0 ? palette.positive : palette.negative }}>
+                      Zielwert {formatSignedPercent(model.annualAverageReturn)}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-[auto_28px] items-start gap-2 justify-self-end">
+                    <div className="flex h-[78px] flex-col items-end justify-between text-[8px] font-semibold uppercase tracking-[0.08em]" style={{ color: palette.muted }}>
+                      <span>40</span>
+                      <span>20</span>
+                      <span>0</span>
+                    </div>
+                    <div className="relative h-[78px] w-[28px] overflow-hidden rounded-full border" style={{ borderColor: palette.panelBorder, background: "rgba(255,255,255,0.04)" }}>
                       <div
                         className="absolute inset-x-[4px] bottom-0 rounded-full"
                         style={{
-                          height: `${annualAverageFillPct}%`,
-                          background: annualAverageReturn >= 0
-                            ? "linear-gradient(180deg, rgba(255,244,214,0.94) 0%, rgba(214,195,143,0.94) 42%, rgba(168,138,98,0.96) 100%)"
-                            : "linear-gradient(180deg, rgba(255,170,170,0.92) 0%, rgba(224,86,86,0.96) 100%)",
-                          boxShadow: annualAverageReturn >= 0 ? "0 0 18px rgba(214,195,143,0.28)" : "0 0 16px rgba(224,86,86,0.24)",
+                          height: `${annualAverageScore}%`,
+                          background: model.annualAverageReturn >= 0
+                            ? theme === "dark"
+                              ? "linear-gradient(180deg, #fff4d6 0%, #d6c38f 55%, #9e7b3f 100%)"
+                              : "linear-gradient(180deg, #dce8ff 0%, #78a8ff 55%, #315dc5 100%)"
+                            : "linear-gradient(180deg, #ffcacb 0%, #e05656 100%)",
+                          boxShadow: model.annualAverageReturn >= 0 ? `0 0 16px ${palette.panelGlow}` : "0 0 16px rgba(224,86,86,0.24)",
                         }}
                       />
-                      <div
-                        className="absolute left-1/2 top-2 -translate-x-1/2 rounded-full px-1.5 py-0.5 text-[8px] font-bold"
-                        style={{
-                          background: annualAverageReturn >= 0 ? "rgba(231,208,122,0.14)" : "rgba(248,113,113,0.14)",
-                          color: annualAverageReturn >= 0 ? "#f6e8bf" : "#fecaca",
-                        }}
-                      >
-                        {formatPercentValue(annualAverageReturn * 100)}
+                    </div>
+                  </div>
+                </div>
+              </KpiCard>
+
+              {headlineCards.map((card) => (
+                <KpiCard
+                  key={card.title}
+                  title={card.title}
+                  value={card.value}
+                  sparkline={card.sparkline}
+                  footer={card.footer}
+                  tone={card.tone}
+                  theme={theme}
+                />
+              ))}
+
+              <KpiCard title="Winrate" value={formatPercent(model.winRate)} footer={`${model.winningTrades} winning trades`} theme={theme}>
+                <div className="grid min-h-[84px] grid-cols-[minmax(0,1fr)_72px] items-start gap-2.5 pt-0">
+                  <div className="min-w-0 space-y-1 text-[10px] leading-[1.1]" style={{ color: palette.muted }}>
+                    <div>{model.winningTrades} winning trades</div>
+                    <div>{model.losingTrades} losing trades</div>
+                    <div className="pt-0.5 text-[9px] leading-[1.15]" style={{ color: palette.heading }}>
+                      Strike rate {formatPercent(model.winRate)}
+                    </div>
+                  </div>
+                  <div className="h-[70px] w-[70px] -translate-y-1 justify-self-end self-start">
+                    <DonutChart
+                      segments={tradeOutcomeSegments}
+                      centerLabel="Win"
+                      centerValue={formatPercent(model.winRate)}
+                      theme={theme}
+                    />
+                  </div>
+                </div>
+              </KpiCard>
+
+              <KpiCard title="Trades" value={String(model.trades)} footer={model.tradeBreakdownText} theme={theme}>
+                <div className="grid min-h-[88px] grid-cols-[minmax(0,1fr)_72px] items-start gap-2.5 pt-0">
+                  <div className="min-w-0 space-y-0.5 text-[9px] leading-[1.02]" style={{ color: palette.muted }}>
+                    {model.tradesByYear.map((entry) => (
+                      <div key={entry.year} className="grid grid-cols-[auto_1fr] items-baseline gap-x-2">
+                        <span>{entry.year}</span>
+                        <span className="justify-self-end font-semibold leading-none" style={{ color: palette.heading }}>
+                          {entry.count}
+                        </span>
                       </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </MetricCard>
-
-            <MetricCard title="Win Rate" value={payload ? formatPercentValue(payload.metrics.winRate * 100) : "--"}>
-              <div className="grid min-h-[104px] grid-cols-[minmax(0,1fr)_80px] items-start gap-3 pt-1">
-                <div className="min-w-0 space-y-1.5 text-[10px] leading-[1.2] text-slate-400">
-                  <div>{winningTrades} winning trades</div>
-                  <div>{losingTrades} losing trades</div>
-                  <div className="pt-0.5 text-[9px] leading-[1.15] text-slate-100">
-                    Strike rate {formatPercentValue((payload?.metrics.winRate ?? 0) * 100)}
-                  </div>
-                </div>
-                <div className="h-[76px] w-[76px] justify-self-end self-start">
-                  <DonutGauge
-                    segments={[
-                      { value: winningTrades, color: "#d6c38f" },
-                      { value: losingTrades, color: "#334155" },
-                    ]}
-                    centerValue={payload ? formatPercentValue(payload.metrics.winRate * 100) : "--"}
-                    centerLabel="Win"
-                  />
-                </div>
-              </div>
-            </MetricCard>
-
-            <MetricCard title="Trades" value={String(payload?.metrics.trades ?? "--")}>
-              <div className="grid min-h-[108px] grid-cols-[minmax(0,1fr)_80px] items-start gap-3 pt-1">
-                <div className="min-w-0 space-y-0.5 text-[9px] leading-[1.08] text-slate-400">
-                  {(payload?.tradesByYear ?? []).map((entry) => (
-                    <div key={entry.year} className="grid grid-cols-[auto_1fr] items-baseline gap-x-2">
-                      <span>{entry.year}</span>
-                      <span className="justify-self-end font-semibold leading-none text-slate-100">{entry.count}</span>
-                    </div>
-                  ))}
-                  <div className="pt-1 text-[9px] leading-[1.08]">
-                    {winningTrades} winners / {losingTrades} losers
-                  </div>
-                </div>
-                <div className="h-[76px] w-[76px] justify-self-end self-start">
-                  <DonutGauge
-                    segments={[
-                      { value: winningTrades, color: "#d6c38f" },
-                      { value: Math.max(0, payload?.metrics.trades ?? 0) - winningTrades, color: "#334155" },
-                    ]}
-                    centerValue={String(payload?.metrics.trades ?? "--")}
-                    centerLabel="Trades"
-                  />
-                </div>
-              </div>
-            </MetricCard>
-
-            <MetricCard title="Long / Short Ratio" value={`${longTrades} / ${shortTrades}`}>
-              <div className="grid min-h-[104px] grid-cols-[minmax(0,1fr)_80px] items-start gap-3 pt-1">
-                <div className="min-w-0 space-y-1 text-[10px] leading-[1.15]">
-                  <div className="text-slate-300">
-                    Long <span className="text-[#d6c38f]">{longTrades}</span>
-                  </div>
-                  <div className="text-slate-300">
-                    Short <span className="text-[#b9ccff]">{shortTrades}</span>
-                  </div>
-                  <div className="pt-0.5 text-[9px] leading-[1.15] text-slate-400">
-                    Ratio {Number.isFinite(longShortRatio) ? `${longShortRatio.toFixed(2)}x` : "--"}
-                  </div>
-                </div>
-                <div className="h-[76px] w-[76px] justify-self-end self-start">
-                  <DonutGauge
-                    segments={[
-                      { value: longTrades, color: "#d6c38f" },
-                      { value: shortTrades, color: "#b9ccff" },
-                    ]}
-                    centerValue={`${longTrades}/${shortTrades}`}
-                    centerLabel="L / S"
-                  />
-                </div>
-              </div>
-            </MetricCard>
-          </div>
-
-          <section className="glass-panel">
-            <div className="mb-3 flex items-center gap-2">
-              <BarChart3 size={14} className="text-slate-300" />
-              <div className="ivq-section-label mb-0">Recent Months</div>
-            </div>
-            <div className="space-y-2">
-              {recentMonths.map((row) => (
-                <div key={`${row.year}-${row.month}`} className="ivq-list-row is-static">
-                  <div>
-                    <div className="text-sm font-semibold text-slate-100">
-                      {MONTH_LABELS[row.month - 1]} {row.year}
-                    </div>
-                    <div className="text-[11px] text-slate-400">Monthly return</div>
-                  </div>
-                  <div className={`text-sm font-semibold ${cellTone(row.monthReturn * 100)}`}>
-                    {formatDecimalPct(row.monthReturn)}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section className="glass-panel">
-            <div className="ivq-section-label">Curve Snapshot</div>
-            <div className="space-y-2">
-              {(selectedCurve?.points ?? []).slice(-6).reverse().map((point) => (
-                <div key={`${selectedCurve?.id}-${point.t}`} className="ivq-list-row is-static">
-                  <div>
-                    <div className="text-sm font-semibold text-slate-100">{new Date(point.t).toLocaleDateString("de-DE")}</div>
-                    <div className="text-[11px] text-slate-400">{point.symbol ?? selectedCurve?.label}</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-sm font-semibold text-slate-100">{formatCurrency(point.value)}</div>
-                    <div className={`text-[11px] ${cellTone((point.returnPct ?? 0) * 100)}`}>
-                      {point.returnPct == null ? "--" : formatDecimalPct(point.returnPct)}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        </aside>
-      </div>
-
-      <div className="ivq-terminal-grid ivq-terminal-grid--track-bottom">
-        <section className="glass-panel">
-          <div className="ivq-section-label">Yearly Performance Table</div>
-          <div className="ivq-data-table-wrap">
-            <table className="ivq-data-table">
-              <thead>
-                <tr>
-                  <th>Year</th>
-                  {MONTH_LABELS.map((month) => <th key={month}>{month}</th>)}
-                  <th>Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(payload?.performanceTable ?? []).map((row) => (
-                  <tr key={row.year}>
-                    <td className="font-semibold text-slate-100">{row.year}</td>
-                    {MONTH_LABELS.map((month) => (
-                      <td key={`${row.year}-${month}`} className={cellTone(row.months[month])}>
-                        {row.months[month] == null ? "-" : formatDecimalPct(row.months[month] ?? 0)}
-                      </td>
                     ))}
-                    <td className={cellTone(row.total)}>{row.total == null ? "-" : formatDecimalPct(row.total ?? 0)}</td>
-                  </tr>
+                    <div className="pt-1 text-[9px] leading-[1.08]">
+                      {model.winningTrades} winners / {model.losingTrades} losers
+                    </div>
+                  </div>
+                  <div className="h-[70px] w-[70px] -translate-y-1 justify-self-end self-start">
+                    <DonutChart segments={tradeOutcomeSegments} centerLabel="Trades" centerValue={String(model.trades)} theme={theme} />
+                  </div>
+                </div>
+              </KpiCard>
+
+              <KpiCard
+                title="Long / Short Ratio"
+                value={`${model.longTrades} / ${model.shortTrades}`}
+                footer={`Ratio ${model.longShortRatio.toFixed(2)}x`}
+                theme={theme}
+              >
+                <div className="grid min-h-[84px] grid-cols-[minmax(0,1fr)_72px] items-start gap-2.5 pt-0">
+                  <div className="min-w-0 space-y-1 text-[10px] leading-[1.08]">
+                    <div style={{ color: palette.text }}>
+                      Long <span style={{ color: palette.accent }}>{model.longTrades}</span>
+                    </div>
+                    <div style={{ color: palette.text }}>
+                      Short <span style={{ color: palette.accentSoft }}>{model.shortTrades}</span>
+                    </div>
+                    <div className="pt-0.5 text-[9px] leading-[1.15]" style={{ color: palette.muted }}>
+                      Ratio {model.longShortRatio.toFixed(2)}x
+                    </div>
+                  </div>
+                  <div className="h-[70px] w-[70px] -translate-y-1 justify-self-end self-start">
+                    <DonutChart
+                      segments={directionSegments}
+                      centerLabel="L / S"
+                      centerValue={`${model.longTrades}/${model.shortTrades}`}
+                      theme={theme}
+                    />
+                  </div>
+                </div>
+              </KpiCard>
+            </div>
+
+            <section
+              className="relative flex min-h-0 flex-col overflow-hidden rounded-[24px] border p-3.5 backdrop-blur-[20px]"
+              style={{
+                background: palette.panelBackground,
+                borderColor: palette.panelBorder,
+                boxShadow: palette.panelShadow,
+              }}
+            >
+              <div
+                className="pointer-events-none absolute inset-0"
+                style={{
+                  background:
+                    theme === "dark"
+                      ? "linear-gradient(135deg, rgba(255,255,255,0.05), transparent 28%), radial-gradient(340px 180px at 92% 0%, rgba(214,195,143,0.14), transparent 64%)"
+                      : "linear-gradient(135deg, rgba(255,255,255,0.05), transparent 28%), radial-gradient(340px 180px at 92% 0%, rgba(77,135,254,0.16), transparent 64%)",
+                }}
+              />
+              <div
+                className="pointer-events-none absolute inset-x-5 top-0 h-px"
+                style={{ background: theme === "dark" ? "rgba(255,243,212,0.18)" : "rgba(218,232,255,0.16)" }}
+              />
+
+              <div className="relative z-[1] mb-2.5">
+                <div>
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.22em]" style={{ color: theme === "dark" ? palette.accent : palette.heading }}>
+                    Risk & Efficiency Metrics
+                  </div>
+                  <p className="mt-1 text-[10px]" style={{ color: palette.muted }}>
+                    Historical dataset through {model.historicalEndDate ? new Date(model.historicalEndDate).toLocaleDateString("en-GB") : "--"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="relative z-[1] grid min-h-0 flex-1 grid-cols-1 gap-2.5 min-[769px]:grid-cols-2 xl:auto-rows-fr">
+                {riskCards.map((card) => (
+                  <KpiCard
+                    key={card.title}
+                    title={card.title}
+                    value={card.value}
+                    score={card.score}
+                    rating={card.rating}
+                    tone="neutral"
+                    theme={theme}
+                  />
                 ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
+              </div>
+            </section>
+          </aside>
+        </div>
       </div>
     </main>
   );

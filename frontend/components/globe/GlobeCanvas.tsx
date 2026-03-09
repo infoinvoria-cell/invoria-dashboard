@@ -221,12 +221,6 @@ function eventIcon(type: string): string {
   if (t === "conflict") return "CF";
   if (t === "wildfire") return "WF";
   if (t === "earthquake") return "EQ";
-  if (t === "shipping" || t.includes("shipping")) return "SH";
-  if (t === "energy" || t.includes("lng") || t.includes("pipeline")) return "EN";
-  if (t === "infrastructure") return "IF";
-  if (t === "commodity_disruption") return "CD";
-  if (t === "cyber") return "CY";
-  if (t === "protest") return "PR";
   if (t === "news_geo") return "NW";
   return "EV";
 }
@@ -273,53 +267,6 @@ function regionBiasColor(bias: string, alpha = 0.45): string {
   if (b.includes("bull")) return `rgba(57,255,64,${alpha.toFixed(3)})`;
   if (b.includes("bear")) return `rgba(255,56,76,${alpha.toFixed(3)})`;
   return `rgba(148,163,184,${alpha.toFixed(3)})`;
-}
-
-function labelPriority(point: any, selectedAssetId: string): number {
-  let score = 0;
-  if (String(point.assetId || "") === String(selectedAssetId || "")) score += 1000;
-  if (point.isCrossEndpoint) score += 940;
-  if (point.kind === "region") score += 820;
-  if (point.kind === "event") {
-    score += 760;
-    const severity = String(point.eventSeverity || "").toLowerCase();
-    if (severity.includes("critical")) score += 180;
-    else if (severity.includes("high")) score += 140;
-    else if (severity.includes("medium")) score += 80;
-    if (point.isCluster) score += Math.min(120, Number(point.clusterCount || 0) * 10);
-    score += Math.min(80, Number(point.eventMagnitude || 0) * 8);
-  }
-  if (point.kind === "commodity") score += 640;
-  if (point.kind === "ship") score += 620;
-  if (!point.kind || point.kind === "asset") {
-    score += 320;
-    score += Number(point.aiScore || 0);
-    if (point.isCluster) score += Math.min(80, Number(point.clusterCount || 0) * 6);
-  }
-  return score;
-}
-
-function prioritizedLabelPoints(points: any[], detailLevel: 1 | 2 | 3, selectedAssetId: string): any[] {
-  const cellLat = detailLevel === 1 ? 22 : detailLevel === 2 ? 11 : 5.5;
-  const cellLng = detailLevel === 1 ? 28 : detailLevel === 2 ? 14 : 7;
-  const maxLabels = detailLevel === 1 ? 18 : detailLevel === 2 ? 34 : 72;
-  const out: any[] = [];
-  const occupied = new Set<string>();
-  const sorted = [...points].sort((left, right) => labelPriority(right, selectedAssetId) - labelPriority(left, selectedAssetId));
-
-  for (const point of sorted) {
-    const lat = Number(point.lat);
-    const lng = Number(point.lng);
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
-    const isMustKeep = String(point.assetId || "") === String(selectedAssetId || "") || point.isCrossEndpoint;
-    const cellKey = `${Math.round(lat / cellLat)}:${Math.round(lng / cellLng)}`;
-    if (!isMustKeep && occupied.has(cellKey)) continue;
-    if (!isMustKeep && out.length >= maxLabels) continue;
-    out.push(point);
-    occupied.add(cellKey);
-  }
-
-  return out;
 }
 
 function GlobeCanvasComponent({
@@ -648,20 +595,8 @@ function GlobeCanvasComponent({
   }, [crossPairPath, themePrimaryHex]);
 
   const geoLayerEnabled = useMemo(
-    () => Boolean(
-      overlayState.conflicts
-      || overlayState.wildfires
-      || overlayState.earthquakes
-      || overlayState.shippingDisruptions
-      || overlayState.commodityInfrastructure
-    ),
-    [
-      overlayState.commodityInfrastructure,
-      overlayState.conflicts,
-      overlayState.earthquakes,
-      overlayState.shippingDisruptions,
-      overlayState.wildfires,
-    ],
+    () => Boolean(overlayState.conflicts || overlayState.wildfires || overlayState.earthquakes || overlayState.shippingDisruptions),
+    [overlayState.conflicts, overlayState.earthquakes, overlayState.shippingDisruptions, overlayState.wildfires],
   );
 
   const geoEventPoints = useMemo(() => {
@@ -670,24 +605,24 @@ function GlobeCanvasComponent({
     const clusterMode = detailLevel === 1;
     if (!clusterMode) {
       return layerRows.map((ev) => ({
-        id: `event:${ev.event_id || ev.id}`,
-        assetId: `event:${ev.event_id || ev.id}`,
+        id: `event:${ev.id}`,
+        assetId: `event:${ev.id}`,
         assetIds: [],
         isCluster: false,
-        name: String(ev.title || ev.label || `${ev.type} - ${ev.location}` || ev.location || ev.type || "Event"),
+        name: String(ev.label || `${ev.type} - ${ev.location}` || ev.location || ev.type || "Event"),
         shortName:
           detailLevel === 2
             ? `${String(ev.location || ev.type || "Event").slice(0, 12)} ${String(ev.severity || "").slice(0, 8)}`.trim()
             : `${String(ev.location || ev.type || "Event").slice(0, 12)} ${String(ev.timestamp || ev.date || "").slice(0, 10)}`.trim(),
         category: "Geo Event",
-        country: String(ev.country || ev.location || ""),
-        locationLabel: String(ev.location || ev.country || ""),
+        country: String(ev.location || ""),
+        locationLabel: String(ev.location || ""),
         icon: eventIcon(ev.type),
         iconUrl: undefined,
         color: String(ev.color || "#ff9800"),
         lat: Number(ev.lat),
         lng: Number(ev.lng),
-        label: String(ev.label || ev.title || `${ev.type} - ${ev.location}`),
+        label: String(ev.label || `${ev.type} - ${ev.location}`),
         clusterCount: 1,
         aiScore: 50,
         macroSensitivity: "Geo Risk",
@@ -701,19 +636,13 @@ function GlobeCanvasComponent({
         eventUrl: String(ev.url || ""),
         eventSentiment: String(ev.sentiment || ""),
         eventConfidence: Number(ev.confidence || 0),
-        eventSource: String(ev.source || ""),
-        eventCountry: String(ev.country || ""),
-        eventRelatedAssets: Array.isArray(ev.relatedAssets) ? ev.relatedAssets : (Array.isArray(ev.related_assets) ? ev.related_assets : []),
-        eventTitle: String(ev.title || ev.label || ""),
-        eventMagnitude: Number(ev.magnitude || 0),
-        eventDepth: Number(ev.depth || 0),
       }));
     }
     const buckets = new Map<string, GeoEventItem[]>();
     for (const ev of layerRows) {
       const lat = Number(ev.lat);
       const lng = Number(ev.lng);
-      const key = String(ev.clusterKey || `${Math.round(lat / 9)}:${Math.round(lng / 9)}`);
+      const key = `${Math.round(lat / 9)}:${Math.round(lng / 9)}`;
       const list = buckets.get(key) ?? [];
       list.push(ev);
       buckets.set(key, list);
@@ -752,12 +681,6 @@ function GlobeCanvasComponent({
         eventUrl: list.length > 1 ? "" : String(list[0]?.url || ""),
         eventSentiment: list.length > 1 ? "" : String(list[0]?.sentiment || ""),
         eventConfidence: list.length > 1 ? 0 : Number(list[0]?.confidence || 0),
-        eventSource: list.length > 1 ? "Multiple sources" : String(list[0]?.source || ""),
-        eventCountry: list.length > 1 ? "" : String(list[0]?.country || ""),
-        eventRelatedAssets: list.length > 1 ? [] : (Array.isArray(list[0]?.relatedAssets) ? list[0]?.relatedAssets : (Array.isArray(list[0]?.related_assets) ? list[0]?.related_assets : [])),
-        eventTitle: list.length > 1 ? "" : String(list[0]?.title || list[0]?.label || ""),
-        eventMagnitude: list.length > 1 ? 0 : Number(list[0]?.magnitude || 0),
-        eventDepth: list.length > 1 ? 0 : Number(list[0]?.depth || 0),
       });
     }
     return clustered;
@@ -838,16 +761,18 @@ function GlobeCanvasComponent({
     });
   }, [commodityRegions, detailLevel, overlayState.commodityRegions]);
 
-  const overlaySurfaceRoutes = useMemo(() => {
+  const overlayArcSegments = useMemo(() => {
     if (!overlayRoutes?.length) return [];
     const out: Array<{
       id: string;
-      path: Array<{ lat: number; lng: number }>;
+      startLat: number;
+      startLng: number;
+      endLat: number;
+      endLng: number;
       color: string;
       altitude: number;
-      stroke: number;
       label: string;
-      kind: "surface";
+      kind: "overlay";
       dashLength: number;
       dashGap: number;
       animateTime: number;
@@ -858,19 +783,24 @@ function GlobeCanvasComponent({
       const baseColor = String(route.color || "rgba(145,175,215,0.35)");
       const isOil = String(route.id || "").toLowerCase().includes("oil");
       const isContainer = String(route.id || "").toLowerCase().includes("cont");
-      const safePath = path.map((point) => ({ lat: Number(point.lat), lng: Number(point.lng) }));
-      out.push({
-        id: `overlay-path:${route.id}`,
-        path: safePath,
-        color: baseColor,
-        altitude: isOil ? 0.008 : 0.0065,
-        stroke: isOil ? 0.28 : isContainer ? 0.22 : 0.18,
-        label: String(route.name || route.id || "Route"),
-        kind: "surface",
-        dashLength: isOil ? 0.3 : 0.22,
-        dashGap: isContainer ? 0.55 : 0.38,
-        animateTime: isOil ? 8500 : 11000,
-      });
+      for (let i = 0; i < path.length - 1; i += 1) {
+        const a = path[i];
+        const b = path[i + 1];
+        out.push({
+          id: `overlay-arc:${route.id}:${i}`,
+          startLat: Number(a.lat),
+          startLng: Number(a.lng),
+          endLat: Number(b.lat),
+          endLng: Number(b.lng),
+          color: baseColor,
+          altitude: isOil ? 0.1 : 0.08,
+          label: String(route.name || route.id || "Route"),
+          kind: "overlay",
+          dashLength: isOil ? 0.45 : 0.35,
+          dashGap: isContainer ? 0.95 : 0.65,
+          animateTime: isOil ? 1800 : 2200,
+        });
+      }
     }
     return out;
   }, [overlayRoutes]);
@@ -881,25 +811,13 @@ function GlobeCanvasComponent({
   );
 
   const htmlLabelData = useMemo(() => {
-    const filtered = pointData.filter((point: any) => {
-      if (detailLevel === 1) {
-        if (point.isCrossEndpoint || String(point.assetId || "") === String(selectedAssetId || "")) return true;
-        if (point.kind === "region") return true;
-        if (point.kind === "event") {
-          const severity = String(point.eventSeverity || "").toLowerCase();
-          return point.isCluster || severity.includes("high") || severity.includes("critical");
-        }
-        return false;
-      }
-      if (detailLevel === 2) {
-        if (point.isCrossEndpoint || String(point.assetId || "") === String(selectedAssetId || "")) return true;
-        if (point.kind === "region") return true;
-        if (point.kind === "event" || point.kind === "commodity" || point.kind === "ship") return true;
-        return !point.isCluster;
-      }
-      return true;
-    });
-    return prioritizedLabelPoints(filtered, detailLevel, selectedAssetId);
+    if (detailLevel === 1) {
+      return pointData.filter((d: any) => d.assetId === selectedAssetId || d.isCluster || d.isCrossEndpoint || d.kind === "event" || d.kind === "ship" || d.kind === "commodity");
+    }
+    if (detailLevel === 2) {
+      return pointData.filter((d: any) => d.assetId === selectedAssetId || d.isCrossEndpoint || !d.isCluster || d.kind === "event" || d.kind === "ship" || d.kind === "commodity" || d.kind === "region");
+    }
+    return pointData;
   }, [detailLevel, pointData, selectedAssetId]);
 
   const crossArcs = useMemo(
@@ -934,8 +852,8 @@ function GlobeCanvasComponent({
     [crossPairPath],
   );
   const allArcs = useMemo(
-    () => [...crossArcs],
-    [crossArcs],
+    () => [...crossArcs, ...overlayArcSegments],
+    [crossArcs, overlayArcSegments],
   );
 
   useEffect(() => {
@@ -1238,9 +1156,6 @@ function GlobeCanvasComponent({
           type: String(point.eventType || "event"),
           date: String(point.eventDate || ""),
           timestamp: String(point.eventTimestamp || point.eventDate || ""),
-          title: String(point.eventTitle || point.name || ""),
-          source: String(point.eventSource || ""),
-          country: String(point.eventCountry || point.country || ""),
           location: String(point.locationLabel || point.country || "Event"),
           severity: String(point.eventSeverity || ""),
           lat: Number(point.lat),
@@ -1251,9 +1166,6 @@ function GlobeCanvasComponent({
           url: String(point.eventUrl || ""),
           sentiment: String(point.eventSentiment || ""),
           confidence: Number(point.eventConfidence || 0),
-          relatedAssets: Array.isArray(point.eventRelatedAssets) ? point.eventRelatedAssets : [],
-          magnitude: Number(point.eventMagnitude || 0),
-          depth: Number(point.eventDepth || 0),
           label: String(point.label || ""),
         });
         return;
@@ -1488,13 +1400,13 @@ function GlobeCanvasComponent({
               const lvl = detailLevel;
               const textBlock =
                 lvl === 1
-                  ? `<div>Type: ${String(d.eventType || "event")}</div><div>Severity: ${String(d.eventSeverity || "-")}</div>`
+                  ? `<div>Type: ${String(d.eventType || "event")}</div>`
                   : lvl === 2
-                    ? `<div>Severity: ${String(d.eventSeverity || "-")}</div><div>Source: ${String(d.eventSource || "-")}</div><div>Time: ${String(d.eventTimestamp || d.eventDate || "-").slice(0, 16)}</div>`
-                    : `<div>Severity: ${String(d.eventSeverity || "-")}</div><div>Source: ${String(d.eventSource || "-")}</div><div>Time: ${String(d.eventTimestamp || d.eventDate || "-")}</div>${Number(d.eventMagnitude || 0) > 0 ? `<div>Magnitude: ${Number(d.eventMagnitude || 0).toFixed(1)}</div>` : ""}${Number(d.eventDepth || 0) > 0 ? `<div>Depth: ${Number(d.eventDepth || 0).toFixed(1)} km</div>` : ""}${Array.isArray(d.eventRelatedAssets) && d.eventRelatedAssets.length ? `<div>Assets: ${d.eventRelatedAssets.join(", ")}</div>` : ""}<div style="margin-top:3px;color:${themeUiSubText};">${String(d.eventDescription || d.eventHeadline || "-")}</div>`;
+                    ? `<div>Severity: ${String(d.eventSeverity || "-")}</div><div>Time: ${String(d.eventTimestamp || d.eventDate || "-").slice(0, 16)}</div>`
+                    : `<div>Severity: ${String(d.eventSeverity || "-")}</div><div>Time: ${String(d.eventTimestamp || d.eventDate || "-")}</div><div style="margin-top:3px;color:${themeUiSubText};">${String(d.eventDescription || d.eventHeadline || "-")}</div>`;
               return `
                 <div style="padding:6px 8px;background:${themeUiBg};border:1px solid ${themeUiBorder};border-radius:8px;font-size:11px;color:${themeUiText};">
-                  <div style="font-weight:700;margin-bottom:2px;">${eventIcon(String(d.eventType || ""))} ${String(d.eventTitle || d.name || "Event")}</div>
+                  <div style="font-weight:700;margin-bottom:2px;">${eventIcon(String(d.eventType || ""))} ${d.name}</div>
                   ${textBlock}
                 </div>
               `;
@@ -1680,14 +1592,7 @@ function GlobeCanvasComponent({
           }}
           polygonsData={worldFeatures}
           polygonCapColor={(f: any) => {
-            const base = polygonColor(
-              selectedOverlay,
-              f,
-              inflationByCountry,
-              policyRateByCountry,
-              commodityRegionScores,
-              goldThemeEnabled,
-            );
+            const base = polygonColor(selectedOverlay, f, inflationByCountry, policyRateByCountry, commodityRegionScores);
             const continent = featureContinent(f);
             const country = normalizeCountryName(String(countryNameOf(f) || ""));
             const riskScore = globalRiskCountryScore.get(country);
@@ -1772,21 +1677,9 @@ function GlobeCanvasComponent({
             if (goldThemeEnabled && selectedOverlay === "none") {
               return "rgba(214,178,74,0.58)";
             }
-            return polygonStrokeColor(selectedOverlay, f, policyRateByCountry, goldThemeEnabled);
+            return polygonStrokeColor(selectedOverlay, f, policyRateByCountry);
           }}
           polygonAltitude={detailLevel === 3 ? 0.0045 : detailLevel === 2 ? 0.0036 : 0.003}
-          pathsData={overlaySurfaceRoutes}
-          pathPoints="path"
-          pathPointLat="lat"
-          pathPointLng="lng"
-          pathColor={(d: any) => String(d.color || themePrimaryHex)}
-          pathStroke={(d: any) => Number(d.stroke ?? 0.2)}
-          pathAltitude={(d: any) => Number(d.altitude ?? 0.006)}
-          pathDashLength={(d: any) => Number(d.dashLength ?? 0.24)}
-          pathDashGap={(d: any) => Number(d.dashGap ?? 0.4)}
-          pathDashAnimateTime={(d: any) => Number(d.animateTime ?? 0)}
-          pathTransitionDuration={0}
-          pathLabel={(d: any) => String(d.label || "")}
           arcsData={allArcs}
           arcStartLat="startLat"
           arcStartLng="startLng"
@@ -1837,31 +1730,12 @@ function GlobeCanvasComponent({
               close
             </button>
           </div>
-          <div className="font-semibold text-slate-100">{activeEvent.title || activeEvent.label || activeEvent.location || "-"}</div>
-          <div className="text-slate-300">{activeEvent.location || activeEvent.country || "-"}</div>
+          <div className="text-slate-300">{activeEvent.location || "-"}</div>
           <div className="mt-1 grid grid-cols-[auto_1fr] gap-x-1 gap-y-0.5 text-slate-300">
-            {String(activeEvent.source || "").trim() ? (
-              <>
-                <span className="text-slate-500">Source</span>
-                <span>{activeEvent.source}</span>
-              </>
-            ) : null}
             <span className="text-slate-500">Timestamp</span>
             <span>{activeEvent.timestamp || activeEvent.date || "-"}</span>
             <span className="text-slate-500">Severity</span>
             <span>{activeEvent.severity || "-"}</span>
-            {Number(activeEvent.magnitude || 0) > 0 ? (
-              <>
-                <span className="text-slate-500">Magnitude</span>
-                <span>{Number(activeEvent.magnitude || 0).toFixed(1)}</span>
-              </>
-            ) : null}
-            {Number(activeEvent.depth || 0) > 0 ? (
-              <>
-                <span className="text-slate-500">Depth</span>
-                <span>{Number(activeEvent.depth || 0).toFixed(1)} km</span>
-              </>
-            ) : null}
             {String(activeEvent.sentiment || "").trim() ? (
               <>
                 <span className="text-slate-500">Sentiment</span>
@@ -1869,11 +1743,6 @@ function GlobeCanvasComponent({
               </>
             ) : null}
           </div>
-          {Array.isArray(activeEvent.relatedAssets) && activeEvent.relatedAssets.length ? (
-            <div className="mt-1.5 border-t border-slate-700/45 pt-1 text-slate-300">
-              Assets: {activeEvent.relatedAssets.join(", ")}
-            </div>
-          ) : null}
           {String(activeEvent.headline || "").trim() ? (
             <div className="mt-1.5 border-t border-slate-700/45 pt-1 text-slate-200">{activeEvent.headline}</div>
           ) : null}

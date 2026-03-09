@@ -272,19 +272,6 @@ function routeSvgPath(points: Array<{ lat: number; lng: number }>): string {
   return d.trim();
 }
 
-function eventCode(type: string): string {
-  const t = String(type || "").toLowerCase();
-  if (t.includes("quake")) return "EQ";
-  if (t.includes("wild")) return "WF";
-  if (t.includes("conflict")) return "CF";
-  if (t.includes("shipping")) return "SH";
-  if (t.includes("infrastructure")) return "IF";
-  if (t.includes("energy")) return "EN";
-  if (t.includes("cyber")) return "CY";
-  if (t.includes("protest")) return "PR";
-  return "EV";
-}
-
 export function MiniWorldMap({
   markers,
   selectedAssetId,
@@ -482,89 +469,42 @@ export function MiniWorldMap({
 
   const overlayMarkers = useMemo<MarkerPoint[]>(() => {
     const out: MarkerPoint[] = [];
-    const eventRows = Array.isArray(geoEvents) ? geoEvents : [];
-    if (overlayDetailLevel === 1) {
-      const buckets = new Map<string, GeoEventItem[]>();
-      for (const ev of eventRows) {
-        const key = String(ev.clusterKey || `${Math.round(Number(ev.lat) / 10)}:${Math.round(Number(ev.lng) / 10)}`);
-        const list = buckets.get(key) ?? [];
-        list.push(ev);
-        buckets.set(key, list);
-      }
-      for (const [key, list] of buckets.entries()) {
-        const lat = list.reduce((sum, row) => sum + Number(row.lat), 0) / Math.max(1, list.length);
-        const lng = list.reduce((sum, row) => sum + Number(row.lng), 0) / Math.max(1, list.length);
-        const first = list[0];
-        const evType = String(first?.event_type || first?.type || "event").toLowerCase();
-        out.push({
-          id: `mm-event-cluster:${key}`,
-          assetId: "",
-          assetIds: [],
-          isCluster: list.length > 1,
-          name: list.length > 1 ? `${list.length} events` : String(first?.title || first?.label || first?.location || "Event"),
-          shortName: list.length > 1 ? `${list.length}x` : eventCode(evType),
-          category: "Geo Event",
-          country: String(first?.country || first?.location || ""),
-          locationLabel: list.length > 1 ? "Clustered events" : String(first?.location || first?.country || "Event"),
-          icon: list.length > 1 ? `${list.length}` : eventCode(evType),
-          color: list.length > 1 ? "#ff9800" : String(first?.color || "#ff9800"),
-          lat,
-          lng,
-          label: list.length > 1 ? `${list.length} events` : String(first?.label || first?.title || first?.location || "Event"),
-          clusterCount: list.length,
-          aiScore: 50,
-          macroSensitivity: "Geo Risk",
-          kind: "event",
-          eventType: list.length > 1 ? "cluster" : evType,
-          eventSeverity: list.length > 1 ? "mixed" : String(first?.severity || ""),
-          eventDate: String(first?.date || ""),
-          eventTimestamp: String(first?.timestamp || first?.date || ""),
-          eventDescription: list.length > 1 ? "" : String(first?.description || first?.headline || ""),
-          eventSource: list.length > 1 ? "Multiple sources" : String(first?.source || ""),
-          eventRelatedAssets: list.length > 1 ? [] : (Array.isArray(first?.relatedAssets) ? first?.relatedAssets : (Array.isArray(first?.related_assets) ? first?.related_assets : [])),
-          eventMagnitude: list.length > 1 ? 0 : Number(first?.magnitude || 0),
-          eventDepth: list.length > 1 ? 0 : Number(first?.depth || 0),
-        });
-      }
-    } else {
-      for (const ev of eventRows) {
-        const evType = String(ev.event_type || ev.type || "event").toLowerCase();
-        const icon = eventCode(evType);
-        const location = String(ev.location || ev.country || "Event");
-        const severity = String(ev.severity || "");
-        const shortName = overlayDetailLevel === 2
+
+    for (const ev of geoEvents ?? []) {
+      const evType = String(ev.event_type || ev.type || "event").toLowerCase();
+      const icon = evType.includes("wild") ? "F" : evType.includes("quake") ? "Q" : "!";
+      const location = String(ev.location || "Event");
+      const severity = String(ev.severity || "");
+      const shortName = overlayDetailLevel === 1
+        ? icon
+        : overlayDetailLevel === 2
           ? `${location.slice(0, 8)} ${severity}`.trim()
           : `${location.slice(0, 10)} ${severity} ${String(ev.timestamp || ev.date || "").slice(5, 10)}`.trim();
-        out.push({
-          id: `mm-event:${ev.event_id || ev.id}`,
-          assetId: "",
-          assetIds: [],
-          isCluster: false,
-          name: String(ev.title || ev.label || location),
-          shortName,
-          category: "Geo Event",
-          country: String(ev.country || location),
-          locationLabel: location,
-          icon,
-          color: String(ev.color || "#ff9800"),
-          lat: Number(ev.lat),
-          lng: Number(ev.lng),
-          label: String(ev.label || ev.title || location),
-          clusterCount: 1,
-          aiScore: 50,
-          macroSensitivity: "Geo Risk",
-          kind: "event",
-          eventType: evType,
-          eventSeverity: severity,
-          eventDate: String(ev.date || ""),
-          eventTimestamp: String(ev.timestamp || ev.date || ""),
-          eventDescription: String(ev.description || ev.headline || ""),
-          eventSource: String(ev.source || ""),
-          eventRelatedAssets: Array.isArray(ev.relatedAssets) ? ev.relatedAssets : (Array.isArray(ev.related_assets) ? ev.related_assets : []),
-          eventMagnitude: Number(ev.magnitude || 0),
-          eventDepth: Number(ev.depth || 0),
-        });
-      }
+      out.push({
+        id: `mm-event:${ev.id}`,
+        assetId: "",
+        assetIds: [],
+        isCluster: false,
+        name: String(ev.label || location),
+        shortName,
+        category: "Geo Event",
+        country: location,
+        locationLabel: location,
+        icon,
+        color: String(ev.color || "#ff9800"),
+        lat: Number(ev.lat),
+        lng: Number(ev.lng),
+        label: String(ev.label || location),
+        clusterCount: 1,
+        aiScore: 50,
+        macroSensitivity: "Geo Risk",
+        kind: "event",
+        eventType: evType,
+        eventSeverity: severity,
+        eventDate: String(ev.date || ""),
+        eventTimestamp: String(ev.timestamp || ev.date || ""),
+        eventDescription: String(ev.description || ev.headline || ""),
+      });
     }
 
     for (const ship of shipTracking ?? []) {
@@ -866,7 +806,7 @@ export function MiniWorldMap({
         {renderMarkers.map(({ point, leftPct, topPct }) => {
           const isSelected = point.kind !== "event" && point.kind !== "ship" && point.kind !== "commodity" && point.kind !== "region" && point.assetId === selectedAssetId;
           const title = point.kind === "event"
-            ? `${point.name || point.locationLabel} | ${point.eventSeverity || ""} | ${point.eventSource || ""}${Number(point.eventMagnitude || 0) > 0 ? ` | M ${Number(point.eventMagnitude || 0).toFixed(1)}` : ""}${Number(point.eventDepth || 0) > 0 ? ` | ${Number(point.eventDepth || 0).toFixed(1)} km` : ""}${Array.isArray(point.eventRelatedAssets) && point.eventRelatedAssets.length ? ` | ${point.eventRelatedAssets.join(", ")}` : ""}${point.eventDescription ? ` | ${point.eventDescription}` : ""}`.trim()
+            ? `${point.locationLabel} | ${point.eventSeverity || ""} | ${point.eventDescription || ""}`.trim()
             : point.kind === "ship"
               ? `${point.name} | ${point.shipType || ""} | ${point.shipSpeed || 0}kt -> ${point.shipDestination || ""}`.trim()
               : point.kind === "commodity"

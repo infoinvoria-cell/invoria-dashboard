@@ -12,7 +12,6 @@
   | "ship_tracking"
   | "oil_routes"
   | "container_traffic"
-  | "commodity_infrastructure"
   | "commodity_regions"
   | "global_risk_layer"
   | "global_liquidity_map"
@@ -28,7 +27,6 @@ export interface OverlayToggleState {
   shipTracking: boolean;
   oilRoutes: boolean;
   containerTraffic: boolean;
-  commodityInfrastructure: boolean;
   commodityRegions: boolean;
   globalRiskLayer: boolean;
   globalLiquidityMap: boolean;
@@ -92,11 +90,6 @@ export interface TrackRecordPerformanceRow {
   months: Record<string, number | null>;
 }
 
-export interface TrackRecordTradesByYear {
-  year: number;
-  count: number;
-}
-
 export interface TrackRecordResponse {
   updatedAt: string | null;
   metrics: {
@@ -107,16 +100,10 @@ export interface TrackRecordResponse {
     sharpeRatio: number;
     calmarRatio: number;
     trades: number;
-    winningTrades: number;
-    losingTrades: number;
-    longTrades: number;
-    shortTrades: number;
-    annualAverageReturn: number;
   };
   curves: TrackRecordCurve[];
   monthlyReturns: TrackRecordMonthlyReturn[];
   performanceTable: TrackRecordPerformanceRow[];
-  tradesByYear: TrackRecordTradesByYear[];
 }
 
 export interface OhlcvPoint {
@@ -220,6 +207,7 @@ export interface SeasonalityResponse {
   assetId: string;
   updatedAt: string;
   projectionDays: number;
+  yearsUsed?: number;
   curve: SeasonalityCurvePoint[];
   stats: SeasonalityStats;
 }
@@ -351,12 +339,6 @@ export interface MarkerPoint {
   eventUrl?: string;
   eventSentiment?: string;
   eventConfidence?: number;
-  eventSource?: string;
-  eventCountry?: string;
-  eventRelatedAssets?: string[];
-  eventTitle?: string;
-  eventMagnitude?: number;
-  eventDepth?: number;
   shipType?: string;
   shipSpeed?: number;
   shipHeading?: number;
@@ -633,15 +615,11 @@ export interface AlertsResponse {
 }
 
 export interface GeoEventItem {
-  event_id?: string;
   id: string;
-  type: "conflict" | "wildfire" | "earthquake" | "news_geo" | "shipping" | "energy" | "infrastructure" | "commodity_disruption" | "cyber" | "protest" | string;
+  type: "conflict" | "wildfire" | "earthquake" | "news_geo" | string;
   event_type?: string;
   date: string;
   timestamp?: string;
-  title?: string;
-  source?: string;
-  country?: string;
   location: string;
   severity: string;
   description?: string;
@@ -654,11 +632,6 @@ export interface GeoEventItem {
   url?: string;
   sentiment?: string;
   confidence?: number;
-  related_assets?: string[];
-  relatedAssets?: string[];
-  magnitude?: number;
-  depth?: number;
-  clusterKey?: string;
   label?: string;
 }
 
@@ -712,18 +685,12 @@ export interface ShipTrackingResponse {
 
 export interface CommodityRegionItem {
   id: string;
-  facilityType?: "mine" | "pipeline" | "lng_terminal" | "energy_hub" | "port" | string;
   commodity: string;
   region: string;
-  country?: string;
   lat: number;
   lng: number;
   icon: string;
   description?: string;
-  relatedAssets?: string[];
-  source?: string;
-  severity?: string;
-  confidence?: number;
 }
 
 export interface CommodityRegionsResponse {

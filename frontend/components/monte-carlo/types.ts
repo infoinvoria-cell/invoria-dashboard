@@ -2,13 +2,16 @@ export type MonteCarloTheme = "dark" | "blue";
 
 export type ConfidenceLevel = 0.9 | 0.95 | 0.99;
 
-export type DatasetKind = "historical" | "strategy" | "screener" | "engine" | "csv";
+export type DatasetKind = "track_record" | "historical" | "strategy" | "screener" | "engine" | "csv" | "market";
+
+export type StressScenarioId = "none" | "gfc2008" | "covid2020" | "flash2010" | "dotcom" | "inflation";
 
 export type DatasetOption = {
   id: string;
   name: string;
   description: string;
   kind: DatasetKind;
+  sourceGroup?: "Track Record" | "Strategie" | "CSV" | "Marktdaten";
   observations: DatasetObservation[];
 };
 
@@ -33,6 +36,21 @@ export type SimulationControls = {
   volatility: number;
   bootstrapRuns: number;
   samplePaths: number;
+  portfolioWeightA: number;
+  portfolioWeightB: number;
+  portfolioWeightC: number;
+  portfolioCorrelation: number;
+  stressScenario: StressScenarioId;
+  walkForwardTrainWindow: number;
+  walkForwardTestWindow: number;
+  parameterStopLossMin: number;
+  parameterStopLossMax: number;
+  parameterTakeProfitMin: number;
+  parameterTakeProfitMax: number;
+  parameterLookbackMin: number;
+  parameterLookbackMax: number;
+  parameterThresholdMin: number;
+  parameterThresholdMax: number;
 };
 
 export type SimulationPathPoint = {
@@ -87,6 +105,60 @@ export type ModelSummaryItem = {
   label: string;
   value: string;
   tone: "neutral" | "accent" | "positive" | "negative";
+  sparkline: number[];
+};
+
+export type MetricSparkline = {
+  expectedReturn: number[];
+  volatility: number[];
+  maxDrawdown: number[];
+  sharpeRatio: number[];
+  robustness: number[];
+  overfitting: number[];
+};
+
+export type PortfolioAllocation = {
+  label: string;
+  weight: number;
+  expectedReturn: number;
+  volatility: number;
+};
+
+export type StressScenarioResult = {
+  id: StressScenarioId;
+  label: string;
+  description: string;
+  severity: number;
+  pathSeries: SimulationPathPoint[];
+  terminalReturn: number;
+  maxDrawdown: number;
+  impact: number;
+};
+
+export type WalkForwardPoint = {
+  segment: string;
+  trainReturn: number;
+  testReturn: number;
+  degradation: number;
+  stability: number;
+};
+
+export type OverfittingSummary = {
+  riskScore: number;
+  stabilityScore: number;
+  randomizedEdge: number;
+  consistencyScore: number;
+  parameterStability: number;
+};
+
+export type ParameterHeatmapPoint = {
+  xLabel: string;
+  yLabel: string;
+  xValue: number;
+  yValue: number;
+  score: number;
+  drawdown: number;
+  robustness: number;
 };
 
 export type ResearchReport = {
@@ -101,6 +173,9 @@ export type ResearchReport = {
   riskScore: number;
   profitProbability: number;
   posteriorReturn: number;
+  maxDrawdownProbability: number;
+  strategyRobustnessScore: number;
+  overfittingRiskScore: number;
 };
 
 export type SimulationResults = {
@@ -109,7 +184,12 @@ export type SimulationResults = {
   returns: number[];
   cumulativeEquity: Array<{ date: string; equity: number }>;
   pathSeries: SimulationPathPoint[];
+  bootstrapPathSeries: SimulationPathPoint[];
+  portfolioPathSeries: SimulationPathPoint[];
   histogram: HistogramBin[];
+  drawdownHistogram: HistogramBin[];
+  portfolioReturnHistogram: HistogramBin[];
+  portfolioDrawdownHistogram: HistogramBin[];
   valueAtRiskHistorical: number;
   valueAtRiskParametric: number;
   expectedShortfallHistorical: number;
@@ -124,6 +204,14 @@ export type SimulationResults = {
   kellyFractionCapped: number;
   payoffRatio: number;
   bayesianReturn: number;
+  metricSparklines: MetricSparkline;
   report: ResearchReport;
   modelCards: ModelSummaryItem[];
+  portfolioAllocations: PortfolioAllocation[];
+  stressScenarioResults: StressScenarioResult[];
+  walkForwardSeries: WalkForwardPoint[];
+  overfittingSummary: OverfittingSummary;
+  overfittingDistribution: number[];
+  parameterHeatmap: ParameterHeatmapPoint[];
+  parameterDrawdownHeatmap: ParameterHeatmapPoint[];
 };

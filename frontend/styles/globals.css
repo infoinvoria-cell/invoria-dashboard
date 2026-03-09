@@ -34,6 +34,14 @@ body {
   min-height: 100%;
 }
 
+.ivq-shell-route {
+  min-height: 100%;
+}
+
+.ivq-shell-route.is-hidden {
+  display: none;
+}
+
 .ivq-sidebar {
   position: fixed;
   left: 0;
@@ -312,6 +320,24 @@ body.ivq-theme-gold .ivq-theme-btn.is-active {
   display: none;
 }
 
+.ivq-theme-btn-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.18);
+}
+
+.ivq-theme-btn-dot.is-blue {
+  background: #4d87fe;
+  box-shadow: 0 0 10px rgba(77, 135, 254, 0.48);
+}
+
+.ivq-theme-btn-dot.is-gold {
+  background: #d6b24a;
+  box-shadow: 0 0 10px rgba(214, 178, 74, 0.44);
+}
+
 .ivq-sidebar.is-collapsed .ivq-theme-btn {
   min-height: 30px;
   font-size: 10px;
@@ -319,7 +345,9 @@ body.ivq-theme-gold .ivq-theme-btn.is-active {
 }
 
 .ivq-sidebar.is-collapsed .ivq-theme-btn-short {
-  display: inline;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .ivq-mobile-sidebar-toggle,

@@ -1,27 +1,85 @@
 "use client";
 
+import { Search, Settings2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { CalendarRange, Search } from "lucide-react";
 
+import SeasonalityWinrateChart from "@/components/seasonality/SeasonalityWinrateChart";
 import SeasonalityChart from "@/components/globe/charts/SeasonalityChart";
 import { GlobeApi } from "@/lib/api";
 import { AssetIcon } from "@/lib/icons";
-import type { AssetItem, HeatmapAssetsResponse, HeatmapSeasonalityItem, SeasonalityResponse } from "@/types";
+import {
+  buildSeasonalityWorkbench,
+  dayLabel,
+  type SeasonalCandidate,
+} from "@/lib/seasonalityWorkbench";
+import type {
+  AssetItem,
+  HeatmapAssetsResponse,
+  HeatmapSeasonalityItem,
+  SeasonalityResponse,
+  TimeseriesResponse,
+} from "@/types";
 
 type DataSource = "tradingview" | "dukascopy" | "yahoo";
+type ThemeMode = "gold" | "blue";
+
+function dayOfYearNow(): number {
+  const now = new Date();
+  const start = Date.UTC(now.getUTCFullYear(), 0, 1);
+  const current = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  return Math.floor((current - start) / 86_400_000) + 1;
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
+}
 
 function formatPct(value: number): string {
   return `${value >= 0 ? "+" : ""}${value.toFixed(2)}%`;
+}
+
+function formatCandidate(candidate: SeasonalCandidate | null): string {
+  if (!candidate) return "--";
+  return `${dayLabel(candidate.startDay)} -> ${dayLabel(candidate.endDay)} | ${candidate.direction} | ${candidate.holdDays}d`;
+}
+
+function DetailRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-[12px] border border-white/8 bg-white/[0.03] px-3 py-2">
+      <div className="text-[10px] uppercase tracking-[0.14em] text-slate-400">{label}</div>
+      <div className="mt-1 text-sm font-semibold text-slate-100">{value}</div>
+    </div>
+  );
 }
 
 export default function SeasonalityPage() {
   const [assets, setAssets] = useState<AssetItem[]>([]);
   const [selectedAssetId, setSelectedAssetId] = useState("");
   const [payload, setPayload] = useState<SeasonalityResponse | null>(null);
+  const [selectedTimeseries, setSelectedTimeseries] = useState<TimeseriesResponse | null>(null);
   const [heatmap, setHeatmap] = useState<HeatmapAssetsResponse | null>(null);
   const [search, setSearch] = useState("");
   const [source, setSource] = useState<DataSource>("tradingview");
+  const [years, setYears] = useState(10);
+  const [minHold, setMinHold] = useState(10);
+  const [maxHold, setMaxHold] = useState(20);
+  const [rangeStartDay, setRangeStartDay] = useState(() => clamp(dayOfYearNow(), 1, 346));
+  const [rangeEndDay, setRangeEndDay] = useState(() => clamp(dayOfYearNow() + 20, 2, 366));
   const [loading, setLoading] = useState(true);
+  const [detailsOpen, setDetailsOpen] = useState(true);
+  const [theme, setTheme] = useState<ThemeMode>("blue");
+
+  useEffect(() => {
+    const readTheme = () => {
+      try {
+        const stored = window.localStorage.getItem("ivq_globe_gold_theme_v1");
+        setTheme(stored === "0" ? "blue" : "gold");
+      } catch {
+        setTheme("blue");
+      }
+    };
+    readTheme();
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -29,8 +87,7 @@ export default function SeasonalityPage() {
       .then((response) => {
         if (cancelled) return;
         setAssets(response.items);
-        const first = response.items.find((asset) => asset.category === "Cross Pairs") ?? response.items[0];
-        setSelectedAssetId(first?.id ?? "");
+        setSelectedAssetId((current) => current || response.items[0]?.id || "");
       })
       .catch(() => {
         if (!cancelled) setAssets([]);
@@ -58,12 +115,19 @@ export default function SeasonalityPage() {
     if (!selectedAssetId) return;
     let cancelled = false;
     setLoading(true);
-    GlobeApi.getSeasonality(selectedAssetId, source)
-      .then((response) => {
-        if (!cancelled) setPayload(response);
+    Promise.all([
+      GlobeApi.getSeasonality(selectedAssetId, source, years),
+      GlobeApi.getTimeseries(selectedAssetId, "D", source, "backadjusted"),
+    ])
+      .then(([seasonalityResponse, timeseriesResponse]) => {
+        if (cancelled) return;
+        setPayload(seasonalityResponse);
+        setSelectedTimeseries(timeseriesResponse);
       })
       .catch(() => {
-        if (!cancelled) setPayload(null);
+        if (cancelled) return;
+        setPayload(null);
+        setSelectedTimeseries(null);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -71,7 +135,7 @@ export default function SeasonalityPage() {
     return () => {
       cancelled = true;
     };
-  }, [selectedAssetId, source]);
+  }, [selectedAssetId, source, years]);
 
   const selectedAsset = useMemo(
     () => assets.find((asset) => asset.id === selectedAssetId) ?? null,
@@ -80,183 +144,183 @@ export default function SeasonalityPage() {
 
   const filteredAssets = useMemo(() => {
     const term = search.trim().toLowerCase();
-    if (!term) return [];
-    return assets
-      .filter((asset) => `${asset.name} ${asset.symbol} ${asset.category} ${asset.country}`.toLowerCase().includes(term))
-      .slice(0, 18);
+    if (!term) return assets;
+    return assets.filter((asset) => `${asset.name} ${asset.symbol} ${asset.category} ${asset.country}`.toLowerCase().includes(term));
   }, [assets, search]);
 
-  const rankedSeasonality = useMemo<HeatmapSeasonalityItem[]>(
-    () => [...(heatmap?.tabs.seasonality.items ?? [])].sort((a, b) => b.score - a.score).slice(0, 12),
-    [heatmap?.tabs.seasonality.items],
+  const selectedHeatmapRow = useMemo<HeatmapSeasonalityItem | null>(
+    () => heatmap?.tabs.seasonality.items.find((item) => item.assetId === selectedAssetId) ?? null,
+    [heatmap?.tabs.seasonality.items, selectedAssetId],
   );
 
+  const safeRangeStart = Math.min(rangeStartDay, rangeEndDay);
+  const safeRangeEnd = Math.max(rangeStartDay, rangeEndDay);
+  const selectedHoldDays = clamp(Math.max(1, safeRangeEnd - safeRangeStart), minHold, maxHold);
+  const workbench = useMemo(
+    () =>
+      buildSeasonalityWorkbench(
+        selectedTimeseries?.ohlcv ?? [],
+        years,
+        minHold,
+        maxHold,
+        safeRangeStart,
+        safeRangeEnd,
+      ),
+    [maxHold, minHold, safeRangeEnd, safeRangeStart, selectedTimeseries?.ohlcv, years],
+  );
+
+  const themeColor = theme === "gold" ? "#d6c38f" : "#4d87fe";
+
+  const handleRangeChange = (startDay: number, endDay: number) => {
+    const safeStart = clamp(Math.min(startDay, endDay), 1, 366);
+    const desiredHold = clamp(Math.max(1, Math.abs(endDay - startDay)), minHold, maxHold);
+    const normalizedStart = clamp(safeStart, 1, 366 - desiredHold);
+    setRangeStartDay(normalizedStart);
+    setRangeEndDay(clamp(normalizedStart + desiredHold, normalizedStart + 1, 366));
+  };
+
   return (
-    <main className="ivq-terminal-page">
-      <section className="glass-panel ivq-terminal-hero">
-        <div>
-          <div className="ivq-section-label">Seasonality</div>
-          <h1 className="ivq-terminal-title">Directional seasonality and holding windows</h1>
-          <p className="ivq-terminal-subtitle">
-            Asset search, ranking and best holding horizon on the existing seasonality engine.
-          </p>
-        </div>
-        <div className="ivq-terminal-hero-meta">
-          <div className="ivq-terminal-pill">{source.toUpperCase()}</div>
-          <div className="ivq-terminal-pill">{payload?.updatedAt ? new Date(payload.updatedAt).toLocaleDateString("de-DE") : "Waiting for data"}</div>
-        </div>
-      </section>
-
-      <div className="ivq-terminal-grid ivq-terminal-grid--seasonality">
-        <aside className="space-y-4">
-          <section className="glass-panel">
-            <div className="ivq-section-label">Asset Search</div>
-            <label className="ivq-form-row">
-              <span>Universe</span>
-              <div className="ivq-input-wrap">
-                <Search size={14} strokeWidth={1.8} />
-                <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search all project assets" className="ivq-input" />
-              </div>
-            </label>
-            <label className="ivq-form-row mt-3">
-              <span>Source</span>
-              <select value={source} onChange={(event) => setSource(event.target.value as DataSource)} className="ivq-select">
-                <option value="tradingview">TradingView</option>
-                <option value="dukascopy">Dukascopy</option>
-                <option value="yahoo">Yahoo</option>
-              </select>
-            </label>
-
-            <div className="mt-3 space-y-2">
-              {(search ? filteredAssets : rankedSeasonality.map((item) => assets.find((asset) => asset.id === item.assetId)).filter(Boolean) as AssetItem[]).map((asset) => {
-                const heatmapRow = rankedSeasonality.find((row) => row.assetId === asset.id);
-                const active = asset.id === selectedAssetId;
-                return (
-                  <button key={asset.id} type="button" className={`ivq-list-row ${active ? "is-active" : ""}`} onClick={() => setSelectedAssetId(asset.id)}>
-                    <div className="flex items-center gap-2">
-                      <AssetIcon iconKey={asset.iconKey} category={asset.category} assetName={asset.name} />
-                      <div className="text-left">
-                        <div className="text-sm font-semibold text-slate-100">{asset.name}</div>
-                        <div className="text-[11px] text-slate-400">{asset.category}</div>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      {heatmapRow ? (
-                        <>
-                          <div className="text-sm font-semibold text-slate-100">{heatmapRow.bestHoldPeriod}d</div>
-                          <div className="text-[11px] text-slate-400">{formatPct(heatmapRow.hitRate * 100)}</div>
-                        </>
-                      ) : (
-                        <div className="text-[11px] text-slate-400">Select</div>
-                      )}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-
-          <section className="glass-panel">
-            <div className="ivq-section-label">Top Seasonal Setups</div>
-            <div className="space-y-2">
-              {rankedSeasonality.map((item) => (
-                <button key={item.assetId} type="button" className="ivq-list-row" onClick={() => setSelectedAssetId(item.assetId)}>
-                  <div>
-                    <div className="text-sm font-semibold text-slate-100">{item.name}</div>
-                    <div className="text-[11px] text-slate-400">{item.direction} | {item.bestHoldPeriod} days</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-sm font-semibold text-slate-100">{item.score.toFixed(0)}</div>
-                    <div className="text-[11px] text-slate-400">{formatPct(item.expectedReturn)}</div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </section>
+    <main className="ivq-terminal-page xl:h-[calc(100dvh-50px)] xl:min-h-[calc(100dvh-50px)] xl:overflow-hidden">
+      <div className="grid h-full min-h-0 gap-4 xl:grid-cols-[220px_minmax(0,1fr)_336px]">
+        <aside className="glass-panel flex min-h-0 flex-col gap-3 !p-3">
+          <div className="ivq-input-wrap">
+            <Search size={14} strokeWidth={1.8} />
+            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Asset suchen" className="ivq-input" />
+          </div>
+          <div className="min-h-0 flex-1 space-y-1 overflow-auto pr-1">
+            {filteredAssets.map((asset) => (
+              <button
+                key={asset.id}
+                type="button"
+                className={`ivq-list-row ${asset.id === selectedAssetId ? "is-active" : ""}`}
+                onClick={() => setSelectedAssetId(asset.id)}
+              >
+                <div className="flex items-center gap-2">
+                  <AssetIcon iconKey={asset.iconKey} category={asset.category} assetName={asset.name} />
+                  <span className="text-sm font-semibold text-slate-100">{asset.name}</span>
+                </div>
+              </button>
+            ))}
+          </div>
         </aside>
 
-        <section className="space-y-4">
-          <section className="glass-panel">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <div>
-                <div className="ivq-section-label">Selected Asset</div>
-                <div className="flex items-center gap-2 text-lg font-semibold text-slate-100">
-                  {selectedAsset ? <AssetIcon iconKey={selectedAsset.iconKey} category={selectedAsset.category} assetName={selectedAsset.name} className="!h-[18px] !w-[18px]" /> : null}
-                  <span>{selectedAsset?.name ?? "No asset selected"}</span>
-                </div>
-              </div>
-              <div className="ivq-terminal-pill">{payload?.stats.direction ?? "--"}</div>
+        <section className="grid min-h-0 gap-3 xl:grid-rows-[auto_minmax(0,1fr)_112px]">
+          <section className="glass-panel flex items-center justify-between gap-3 !p-3">
+            <div className="flex items-center gap-2">
+              {selectedAsset ? <AssetIcon iconKey={selectedAsset.iconKey} category={selectedAsset.category} assetName={selectedAsset.name} className="!h-[18px] !w-[18px]" /> : null}
+              <div className="text-base font-semibold text-slate-100">{selectedAsset?.name ?? "Seasonality"}</div>
             </div>
-            <div className="h-[420px]">
-              {loading ? (
-                <div className="grid h-full place-items-center text-sm text-slate-400">Loading seasonality curve...</div>
-              ) : (
-                <SeasonalityChart payload={payload} />
-              )}
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="ivq-terminal-pill">{dayLabel(safeRangeStart)} - {dayLabel(safeRangeEnd)}</div>
+              <div className="ivq-terminal-pill">{Math.max(10, years)} Jahre</div>
+              <button type="button" className="ivq-segment-btn" onClick={() => setDetailsOpen((current) => !current)}>
+                <Settings2 size={14} /> Details
+              </button>
             </div>
           </section>
 
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.9fr)]">
-            <section className="glass-panel">
-              <div className="ivq-section-label">Statistics</div>
-              <div className="ivq-stat-grid">
-                <div className="ivq-stat-card">
-                  <span className="ivq-stat-label">Best Hold</span>
-                  <strong>{payload?.stats.bestHorizonDays ?? "--"} days</strong>
-                </div>
-                <div className="ivq-stat-card">
-                  <span className="ivq-stat-label">Hit Rate</span>
-                  <strong>{payload ? formatPct(payload.stats.hitRate * 100) : "--"}</strong>
-                </div>
-                <div className="ivq-stat-card">
-                  <span className="ivq-stat-label">Expected Return</span>
-                  <strong>{payload ? formatPct(payload.stats.expectedValue) : "--"}</strong>
-                </div>
-                <div className="ivq-stat-card">
-                  <span className="ivq-stat-label">Projection</span>
-                  <strong>{payload?.projectionDays ?? "--"} days</strong>
-                </div>
-                <div className="ivq-stat-card">
-                  <span className="ivq-stat-label">Samples</span>
-                  <strong>{payload?.stats.samples ?? "--"}</strong>
-                </div>
-                <div className="ivq-stat-card">
-                  <span className="ivq-stat-label">Sharpe</span>
-                  <strong>{payload?.stats.sharpeRatio?.toFixed(2) ?? "--"}</strong>
-                </div>
-                <div className="ivq-stat-card">
-                  <span className="ivq-stat-label">Sortino</span>
-                  <strong>{payload?.stats.sortinoRatio?.toFixed(2) ?? "--"}</strong>
-                </div>
-                <div className="ivq-stat-card">
-                  <span className="ivq-stat-label">Avg 20d</span>
-                  <strong>{payload ? formatPct(payload.stats.avgReturn20d) : "--"}</strong>
-                </div>
+          <section className="glass-panel grid min-h-0 gap-3 !p-3 xl:grid-rows-[minmax(0,1fr)_76px]">
+            <div className="grid min-h-0 gap-3 xl:grid-cols-[minmax(0,1fr)_240px]">
+              <div className="min-h-0">
+                {loading ? (
+                  <div className="grid h-full place-items-center text-sm text-slate-400">Lade Jahres-Saisonalitaet...</div>
+                ) : (
+                  <SeasonalityChart
+                    payload={payload}
+                    lineColor={themeColor}
+                    rangeStartDay={safeRangeStart}
+                    rangeEndDay={safeRangeEnd}
+                    minHold={minHold}
+                    maxHold={maxHold}
+                    onRangeChange={handleRangeChange}
+                  />
+                )}
               </div>
-            </section>
+              <div className="grid content-start gap-2">
+                <DetailRow label="Current Pattern" value={formatCandidate(workbench.currentPattern)} />
+                <DetailRow label="Current Winrate" value={workbench.currentPattern ? `${workbench.currentPattern.winRate.toFixed(0)}%` : "--"} />
+                <DetailRow label="Current Avg Return" value={workbench.currentPattern ? formatPct(workbench.currentPattern.averageReturn) : "--"} />
+                <DetailRow label="Current Hold" value={workbench.currentPattern ? `${workbench.currentPattern.holdDays} Tage` : "--"} />
+                <DetailRow label="Selected Range" value={`${dayLabel(safeRangeStart)} - ${dayLabel(safeRangeEnd)}`} />
+                <DetailRow label="Data Base" value={`${payload?.yearsUsed ?? Math.max(10, years)} Jahre`} />
+              </div>
+            </div>
+            <div className="grid grid-cols-[minmax(0,1fr)_170px_150px] items-center gap-3 rounded-[14px] border border-white/8 bg-white/[0.03] px-3 py-2.5">
+              <div className="text-[10px] uppercase tracking-[0.16em] text-slate-300">
+                Range direkt im Chart mit der Maus ziehen. Haltedauer wird automatisch auf {minHold}-{maxHold} Tage begrenzt.
+              </div>
+              <div className="text-right text-[10px] uppercase tracking-[0.14em] text-slate-400">
+                <div>Selected Hold</div>
+                <div className="mt-1 text-sm font-semibold text-slate-100">{selectedHoldDays} Tage</div>
+              </div>
+              <div className="text-right text-[10px] uppercase tracking-[0.14em] text-slate-400">
+                <div>Range</div>
+                <div className="mt-1 text-sm font-semibold text-slate-100">{dayLabel(safeRangeStart)} - {dayLabel(safeRangeEnd)}</div>
+              </div>
+            </div>
+          </section>
 
-            <section className="glass-panel">
-              <div className="mb-3 flex items-center gap-2">
-                <CalendarRange size={14} className="text-slate-300" />
-                <div className="ivq-section-label mb-0">Best Windows</div>
-              </div>
-              <div className="space-y-2">
-                {rankedSeasonality.slice(0, 8).map((item) => (
-                  <button key={item.assetId} type="button" className="ivq-list-row" onClick={() => setSelectedAssetId(item.assetId)}>
-                    <div>
-                      <div className="text-sm font-semibold text-slate-100">{item.name}</div>
-                      <div className="text-[11px] text-slate-400">{item.direction} | hold {item.bestHoldPeriod}d</div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-sm font-semibold text-slate-100">{formatPct(item.expectedValue)}</div>
-                      <div className="text-[11px] text-slate-400">{formatPct(item.hitRate * 100)}</div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </section>
-          </div>
+          <section className="glass-panel flex min-h-0 flex-col gap-2 !p-3">
+            <div className="flex items-center justify-between gap-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-300">
+              <span>Winrate 01.01 - 31.12</span>
+              <span>{minHold}-{maxHold} Tage Hold</span>
+            </div>
+            <div className="min-h-0 flex-1">
+              <SeasonalityWinrateChart
+                points={workbench.dayCurve}
+                rangeStartDay={safeRangeStart}
+                rangeEndDay={safeRangeEnd}
+                themeColor={themeColor}
+              />
+            </div>
+          </section>
         </section>
+
+        <aside className="glass-panel flex min-h-0 flex-col gap-3 !p-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-300">Details</div>
+            <button type="button" className="ivq-segment-btn" onClick={() => setDetailsOpen((current) => !current)}>
+              {detailsOpen ? "Hide" : "Show"}
+            </button>
+          </div>
+
+          {detailsOpen ? (
+            <div className="grid min-h-0 flex-1 content-start gap-2 overflow-auto">
+              <label className="ivq-form-row">
+                <span>Source</span>
+                <select value={source} onChange={(event) => setSource(event.target.value as DataSource)} className="ivq-select">
+                  <option value="tradingview">TradingView</option>
+                  <option value="dukascopy">Dukascopy</option>
+                  <option value="yahoo">Yahoo</option>
+                </select>
+              </label>
+              <label className="ivq-form-row">
+                <span>Years</span>
+                <input type="number" min={10} value={years} onChange={(event) => setYears(Math.max(10, Number(event.target.value) || 10))} className="ivq-select" />
+              </label>
+              <label className="ivq-form-row">
+                <span>Min Hold</span>
+                <input type="number" min={1} max={90} value={minHold} onChange={(event) => setMinHold(clamp(Number(event.target.value) || 10, 1, maxHold))} className="ivq-select" />
+              </label>
+              <label className="ivq-form-row">
+                <span>Max Hold</span>
+                <input type="number" min={minHold} max={120} value={maxHold} onChange={(event) => setMaxHold(clamp(Number(event.target.value) || 20, minHold, 120))} className="ivq-select" />
+              </label>
+
+              <DetailRow label="Current Pattern" value={formatCandidate(workbench.currentPattern)} />
+              <DetailRow label="Current Samples" value={String(workbench.currentPattern?.samples ?? "--")} />
+              <DetailRow label="Next Pattern" value={formatCandidate(workbench.nextPattern)} />
+              <DetailRow label="Next Winrate" value={workbench.nextPattern ? `${workbench.nextPattern.winRate.toFixed(0)}%` : "--"} />
+              <DetailRow label="Next Avg Return" value={workbench.nextPattern ? formatPct(workbench.nextPattern.averageReturn) : "--"} />
+              <DetailRow label="Seasonality EV" value={payload ? formatPct(payload.stats.expectedValue) : "--"} />
+              <DetailRow label="Heatmap Return" value={selectedHeatmapRow ? formatPct(selectedHeatmapRow.expectedReturn) : "--"} />
+              <DetailRow label="Sharpe" value={payload?.stats.sharpeRatio?.toFixed(2) ?? "--"} />
+              <DetailRow label="Sortino" value={payload?.stats.sortinoRatio?.toFixed(2) ?? "--"} />
+            </div>
+          ) : (
+            <div className="grid flex-1 place-items-center text-sm text-slate-500">Details ausgeblendet</div>
+          )}
+        </aside>
       </div>
     </main>
   );

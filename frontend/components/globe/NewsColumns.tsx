@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect, useMemo, useState } from "react";
 import { Globe2 } from "lucide-react";
 
@@ -91,32 +93,21 @@ function NewsList({
   titleIconUrl,
   items,
   goldThemeEnabled = false,
-  forceGerman,
 }: {
   title: string;
   titleIconUrl: string;
   items: NewsItem[];
   goldThemeEnabled?: boolean;
-  forceGerman: boolean;
 }) {
+  const [showGerman, setShowGerman] = useState(false);
   const [translations, setTranslations] = useState<Record<string, TranslationRow>>({});
   const rows = useMemo(() => sortRows(items).slice(0, 10), [items]);
   const accentClass = goldThemeEnabled ? "hover:border-[#d6b24a]/60 hover:text-[#fff3d1]" : "hover:border-[#2962ff]/60 hover:text-[#dce8ff]";
 
-  const toggleTranslation = async (item: NewsItem, idx: number, targetGerman?: boolean) => {
+  const ensureGermanTranslation = async (item: NewsItem, idx: number) => {
     const key = rowKey(item, idx);
     const current = translations[key];
-    const shouldShowGerman = targetGerman ?? !current?.showTranslated;
-
-    if (!shouldShowGerman) {
-      setTranslations((prev) => ({
-        ...prev,
-        [key]: { ...(prev[key] ?? { loading: false }), showTranslated: false, loading: false },
-      }));
-      return;
-    }
-
-    if (current?.title || current?.description) {
+    if (current?.loading || current?.title || current?.description) {
       setTranslations((prev) => ({
         ...prev,
         [key]: { ...(prev[key] ?? { loading: false }), showTranslated: true, loading: false },
@@ -128,6 +119,7 @@ function NewsList({
       ...prev,
       [key]: { ...(prev[key] ?? {}), loading: true, showTranslated: false },
     }));
+
     try {
       const res = await GlobeApi.translateNews(
         String(item.newsId || key),
@@ -153,11 +145,18 @@ function NewsList({
   };
 
   useEffect(() => {
-    // when forceGerman changes, toggle all visible rows accordingly
+    if (!showGerman) {
+      setTranslations((prev) =>
+        Object.fromEntries(
+          Object.entries(prev).map(([key, value]) => [key, { ...value, showTranslated: false, loading: false }]),
+        ),
+      );
+      return;
+    }
     rows.forEach((item, idx) => {
-      void toggleTranslation(item, idx, forceGerman);
+      void ensureGermanTranslation(item, idx);
     });
-  }, [forceGerman, rows]);
+  }, [rows, showGerman]);
 
   return (
     <div className="glass-panel ivq-subpanel flex min-h-0 flex-1 flex-col">
@@ -166,30 +165,22 @@ function NewsList({
           <img src={titleIconUrl} alt="" width={14} height={14} className="h-3.5 w-3.5 object-contain" loading="lazy" />
           <span>{title}</span>
         </div>
-        <div className="flex items-center gap-1.5 text-[9px] font-semibold text-slate-300">
-          <span className="uppercase tracking-[0.16em]">Lang</span>
-          <div className="inline-flex overflow-hidden rounded-full border border-slate-700/70 bg-[rgba(15,23,42,0.9)]">
-            <button
-              type="button"
-              className={`px-1.5 py-0.5 ${!forceGerman ? "bg-slate-800/80 text-slate-100" : "text-slate-400"}`}
-            >
-              EN
-            </button>
-            <button
-              type="button"
-              className={`px-1.5 py-0.5 ${forceGerman ? "bg-slate-800/80 text-slate-100" : "text-slate-400"}`}
-            >
-              DE
-            </button>
-          </div>
-        </div>
+        <button
+          type="button"
+          onClick={() => setShowGerman((prev) => !prev)}
+          className={`inline-flex h-6 shrink-0 items-center gap-1 rounded-md border border-slate-700/65 px-1.5 text-[9px] font-semibold text-slate-200 transition ${accentClass}`}
+          title={showGerman ? "Switch back to English" : "Translate to German"}
+        >
+          <Globe2 size={11} strokeWidth={1.8} />
+          <span>{showGerman ? "EN" : "DE"}</span>
+        </button>
       </div>
       <div className="scroll-thin min-h-0 flex-1 overflow-y-auto pr-1">
         <div className="space-y-2">
           {rows.map((item, idx) => {
             const key = rowKey(item, idx);
             const translation = translations[key];
-            const translated = Boolean(translation?.showTranslated);
+            const translated = Boolean(showGerman && translation?.showTranslated);
             const titleText = translated ? (translation?.title || item.title) : item.title;
             const descriptionText = translated ? (translation?.description || item.description || "") : String(item.description || "");
             const sentiment = sentimentMeta(String(item.sentiment || "neutral"), goldThemeEnabled);
@@ -197,6 +188,7 @@ function NewsList({
             const category = categoryLabel(item.category);
             const timestamp = relativeTime(item.timestamp || item.publishedAt);
             const relatedAssets = Array.isArray(item.relatedAssets) ? item.relatedAssets.slice(0, 3) : [];
+
             return (
               <article
                 key={key}
@@ -226,20 +218,14 @@ function NewsList({
                         <span className="rounded border border-slate-700/65 px-1.5 py-[1px] text-[9px] text-slate-300">
                           {category}
                         </span>
+                        {translation?.loading && showGerman ? (
+                          <span className="rounded border border-slate-700/65 px-1.5 py-[1px] text-[9px] text-slate-300">
+                            Translating...
+                          </span>
+                        ) : null}
                       </div>
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      void toggleTranslation(item, idx);
-                    }}
-                    className={`inline-flex h-6 shrink-0 items-center gap-1 rounded-md border border-slate-700/65 px-1.5 text-[9px] font-semibold text-slate-200 transition ${accentClass}`}
-                    title={translated ? "Back to original" : "Translate to German"}
-                  >
-                    <Globe2 size={11} strokeWidth={1.8} />
-                    <span>{translation?.loading ? "..." : translated ? "EN" : "DE"}</span>
-                  </button>
                 </div>
 
                 <a
@@ -285,37 +271,19 @@ function NewsList({
 }
 
 export function NewsColumns({ globalNews, assetNews, assetName, assetIconUrl, goldThemeEnabled = false }: Props) {
-  const [globalGerman, setGlobalGerman] = useState(false);
-
-  const toggleGlobalLanguage = () => {
-    setGlobalGerman((prev) => !prev);
-  };
-
   return (
-    <div className="grid h-full grid-cols-2 gap-3">
-      <div className="col-span-2 flex items-center justify-end pb-1 text-[10px] text-slate-300">
-        <button
-          type="button"
-          onClick={toggleGlobalLanguage}
-          className="inline-flex items-center gap-1 rounded-full border border-slate-700/70 bg-[rgba(15,23,42,0.9)] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.16em]"
-        >
-          <Globe2 size={11} strokeWidth={1.8} />
-          <span>{globalGerman ? "DE" : "EN"}</span>
-        </button>
-      </div>
+    <div className="grid h-full grid-cols-1 gap-3 min-[769px]:grid-cols-2">
       <NewsList
         title="Global News"
         titleIconUrl={headlineGlyph("global")}
         items={globalNews}
         goldThemeEnabled={goldThemeEnabled}
-        forceGerman={globalGerman}
       />
       <NewsList
         title={`${assetName || "Asset"} News`}
         titleIconUrl={assetIconUrl || headlineGlyph(assetName || "asset")}
         items={assetNews}
         goldThemeEnabled={goldThemeEnabled}
-        forceGerman={globalGerman}
       />
     </div>
   );

@@ -28,6 +28,8 @@ export type TrackRecordPalette = {
     curve3x: string;
     curve4x: string;
     curve5x: string;
+    compareSp500: string;
+    compareDax40: string;
   };
 };
 
@@ -61,6 +63,8 @@ export const TRACK_RECORD_THEMES: Record<TrackRecordTheme, TrackRecordPalette> =
       curve3x: "#D6C38F",
       curve4x: "#b99953",
       curve5x: "#f5d47b",
+      compareSp500: "#ff4d6d",
+      compareDax40: "#9d5cff",
     },
   },
   blue: {
@@ -92,6 +96,8 @@ export const TRACK_RECORD_THEMES: Record<TrackRecordTheme, TrackRecordPalette> =
       curve3x: "#78a8ff",
       curve4x: "#3f6fdf",
       curve5x: "#4dc8ff",
+      compareSp500: "#ff4d6d",
+      compareDax40: "#9d5cff",
     },
   },
 };

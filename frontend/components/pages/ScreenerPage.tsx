@@ -1,414 +1,685 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Search, TrendingDown, TrendingUp } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
-import SimpleLineChart from "@/components/charts/SimpleLineChart";
+import { useDashboardStateStore } from "@/components/DashboardStateProvider";
+import ScreenerHeaderCharts from "@/components/screener/ScreenerHeaderCharts";
+import ScreenerSettingsDrawer from "@/components/screener/ScreenerSettingsDrawer";
+import ScreenerTable from "@/components/screener/ScreenerTable";
 import { GlobeApi } from "@/lib/api";
-import { AssetIcon } from "@/lib/icons";
+import { ensureAssets, ensureHeatmapAssets, ensureTimeseries } from "@/lib/dashboardPreload";
+import { buildMacroAlignment } from "@/lib/screener/macro";
+import {
+  buildSelectedAnalysis,
+  buildScreenerRow,
+  type CompareSeriesMap,
+} from "@/lib/screener/pineLikeEngine";
+import { sortScreenerRows } from "@/lib/screener/screenerSort";
 import type {
-  AlertItem,
+  PineScreenerRow,
+  ScreenerMacroSnapshot,
+  PineScreenerSettings,
+  ScreenerSortDirection,
+  ScreenerSortKey,
+  ScreenerTheme,
+} from "@/lib/screener/types";
+import type {
   AssetItem,
-  AssetSignalDetailResponse,
-  CategoryHeatmapItem,
-  CategoryHeatmapResponse,
-  OpportunitiesResponse,
+  CommodityShockResponse,
+  FundamentalOscillatorResponse,
+  HeatmapAssetsResponse,
+  HeatmapSeasonalityItem,
+  InflationResponse,
+  RiskResponse,
+  SeasonalityResponse,
   TimeseriesResponse,
+  VolatilityRegimeResponse,
 } from "@/types";
 
-type DataSource = "tradingview" | "dukascopy" | "yahoo";
-
-function scoreTone(score: number): string {
-  if (score >= 80) return "text-emerald-300";
-  if (score >= 60) return "text-blue-200";
-  if (score >= 40) return "text-slate-200";
-  if (score >= 20) return "text-amber-200";
-  return "text-rose-300";
+function assetGroupOf(asset: AssetItem | null, category: string): string {
+  const cat = String(asset?.category ?? category ?? "").toLowerCase();
+  const assetId = String(asset?.id ?? "").toLowerCase();
+  const name = String(asset?.name ?? "").toLowerCase();
+  if (assetId.startsWith("cross_") || cat.includes("cross pair") || cat.includes("crosspair")) return "Forex Cross Pairs";
+  if ((cat.includes("future") || cat.includes("futures")) && (cat.includes("fx") || cat.includes("currency"))) return "FX Futures";
+  if (cat === "fx" || cat.includes("major fx") || cat.includes("currency")) return "FX Futures";
+  if (cat.includes("crypto")) return "Crypto";
+  if (cat.includes("metal") || name.includes("gold") || name.includes("silver") || name.includes("platinum")) return "Metals";
+  if (cat.includes("energy") || cat.includes("agriculture") || cat.includes("soft") || cat.includes("livestock") || cat.includes("commodity")) return "Commodities";
+  if (name.includes("s&p") || name.includes("nasdaq") || name.includes("dow") || name.includes("russell") || name.includes("dax")) return "Indices";
+  if (cat.includes("equit") || cat.includes("stock") || cat.includes("share")) return "Aktien";
+  return "Macro";
 }
 
-function toneChip(tone: string): string {
-  const t = String(tone || "").toLowerCase();
-  if (t.includes("bull")) return "bg-emerald-500/12 text-emerald-200 border-emerald-400/30";
-  if (t.includes("bear")) return "bg-rose-500/12 text-rose-200 border-rose-400/30";
-  return "bg-slate-500/12 text-slate-200 border-slate-400/30";
+const LEGACY_DEFAULT_GROUPS = ["Forex Cross Pairs", "FX Futures", "Metals", "Commodities", "Aktien"];
+
+function defaultSelectedGroupsFromAvailable(groups: string[]): string[] {
+  const withoutStocks = groups.filter((group) => group !== "Aktien");
+  return withoutStocks.length ? withoutStocks : groups;
 }
 
-function formatPct(value: number): string {
-  return `${value >= 0 ? "+" : ""}${value.toFixed(1)}%`;
+const DEFAULT_SETTINGS: PineScreenerSettings = {
+  source: "tradingview",
+  timeframe: "D",
+  screenerLookback: 2,
+  valuationSignalWindow: "val20",
+  valuationAgreementMode: "combined",
+  selectedAssetGroups: LEGACY_DEFAULT_GROUPS,
+  compareSymbol1: "DXY",
+  compareSymbol2: "GC1!",
+  compareSymbol3: "ZB1!",
+  length: 20,
+  rescaleLength: 100,
+  top: 75,
+  bottom: -75,
+  comactive: true,
+  comactive1: false,
+  sd: true,
+  sd1: true,
+  candle: true,
+  longg: true,
+  shortt: true,
+  dojiextrem: false,
+  minBarsBeforeBox: 1,
+  pauseBars: 3,
+  yearsReq: 1,
+  commercial: false,
+  index1: false,
+  smalltrader: false,
+  indexsmall: false,
+  andcot: false,
+  umkehrcot: false,
+  orcot: false,
+  zeitfilter: false,
+  zeitzone: -2,
+  startHour: 14,
+  startMinute: 0,
+  endHour: 16,
+  endMinute: 0,
+  seasonalityThreshold: 60,
+  weekdays: { mon: true, tue: true, wed: true, thu: true, fri: true },
+  months: { jan: true, feb: true, mar: true, apr: true, may: true, jun: true, jul: true, aug: true, sep: true, oct: true, nov: true, dec: true },
+};
+
+function normalizeLookback(value: number | null | undefined): number {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return DEFAULT_SETTINGS.screenerLookback;
+  return Math.max(1, Math.round(numeric));
+}
+
+function canonicalizeScreenerSettings(value?: Partial<PineScreenerSettings> | null): PineScreenerSettings {
+  const merged = {
+    ...DEFAULT_SETTINGS,
+    ...(value ?? {}),
+  };
+  return {
+    ...merged,
+    screenerLookback: normalizeLookback(merged.screenerLookback),
+    valuationSignalWindow: "val20",
+    valuationAgreementMode: "combined",
+    comactive: true,
+    comactive1: false,
+    sd: true,
+    sd1: true,
+    candle: true,
+    longg: true,
+    shortt: true,
+    selectedAssetGroups: uniqueGroups(merged.selectedAssetGroups),
+  };
+}
+
+function compareLabel(symbol: string): string {
+  const normalized = String(symbol).toUpperCase();
+  if (normalized === "DXY") return "Dollar Index";
+  if (normalized === "GC1!") return "Gold";
+  if (normalized === "ZB1!" || normalized === "US10Y" || normalized === "^TNX") return "US 10Y";
+  return normalized;
+}
+
+function loadingRow(asset: AssetItem, selectedAssetId: string | null): PineScreenerRow {
+  return {
+    assetId: asset.id,
+    name: asset.name,
+    symbol: asset.symbol,
+    category: asset.category,
+    assetGroup: assetGroupOf(asset, asset.category),
+    signal: "neutral",
+    signalDirection: "NONE",
+    signalLabel: "Loading",
+    entryState: "WAIT",
+    entryConfirmed: false,
+    priority: 0,
+    ageBars: null,
+    passesSignalFilter: false,
+    seasonalityScore: 0,
+    seasonalityDirection: "NEUTRAL",
+    val10Combined: 0,
+    val20Combined: 0,
+    val10Direction: "NONE",
+    val20Direction: "NONE",
+    val10MatchCount: 0,
+    val20MatchCount: 0,
+    val10Components: [0, 0, 0, 0],
+    val20Components: [0, 0, 0, 0],
+    valuationPhase: "NEUTRAL",
+    supplyDemandLabel: "Lade Zonen",
+    supplyDemandStrongLabel: "Lade Zonen",
+    supplyDemandStrength: "none",
+    supplyDemandDirection: "neutral",
+    hasNormalDemand: false,
+    hasNormalSupply: false,
+    hasStrongDemand: false,
+    hasStrongSupply: false,
+    currentPatternLabel: "Loading",
+    currentPatternHoldDays: 0,
+    currentPatternHitRate: 0,
+    currentPatternAvgReturn: 0,
+    nextPatternLabel: "Loading",
+    nextPatternHoldDays: 0,
+    nextPatternHitRate: 0,
+    nextPatternAvgReturn: 0,
+    seasonalityCurve: [],
+    cpiAlignment: "neutral",
+    ppiAlignment: "neutral",
+    cotCommercialsAlignment: "neutral",
+    riskAlignment: "neutral",
+    lastCandles: [],
+    selected: selectedAssetId === asset.id,
+    loading: true,
+  };
+}
+
+function uniqueGroups(groups: string[]): string[] {
+  return Array.from(new Set(groups.filter(Boolean)));
+}
+
+function sameGroupSet(left: string[], right: string[]): boolean {
+  if (left.length !== right.length) return false;
+  const leftSorted = [...left].sort();
+  const rightSorted = [...right].sort();
+  return leftSorted.every((item, index) => item === rightSorted[index]);
+}
+
+function normalizeSelectedGroups(selectedGroups: string[], availableGroups: string[]): string[] {
+  const normalized = uniqueGroups(selectedGroups).filter((group) => availableGroups.includes(group));
+  return normalized.length ? normalized : defaultSelectedGroupsFromAvailable(availableGroups);
 }
 
 export default function ScreenerPage() {
-  const [assets, setAssets] = useState<AssetItem[]>([]);
-  const [heatmap, setHeatmap] = useState<CategoryHeatmapResponse | null>(null);
-  const [opportunities, setOpportunities] = useState<OpportunitiesResponse | null>(null);
-  const [alerts, setAlerts] = useState<AlertItem[]>([]);
-  const [detail, setDetail] = useState<AssetSignalDetailResponse | null>(null);
-  const [timeseries, setTimeseries] = useState<TimeseriesResponse | null>(null);
-  const [source, setSource] = useState<DataSource>("tradingview");
-  const [category, setCategory] = useState("Equities");
-  const [sortBy, setSortBy] = useState("ai_score");
-  const [query, setQuery] = useState("");
-  const [selectedAssetId, setSelectedAssetId] = useState("");
-  const [loadingList, setLoadingList] = useState(true);
-  const [loadingDetail, setLoadingDetail] = useState(false);
+  const dashboardStore = useDashboardStateStore();
+  const persistedState = useMemo(
+    () =>
+      dashboardStore.getPageState<{
+        settings?: PineScreenerSettings;
+        draftSettings?: PineScreenerSettings;
+        selectedAssetId?: string | null;
+        sortKey?: ScreenerSortKey;
+        sortDirection?: ScreenerSortDirection;
+        drawerOpen?: boolean;
+      }>("screener-pine") ?? {},
+    [dashboardStore],
+  );
+  const [theme, setTheme] = useState<ScreenerTheme>("gold");
+  const [assets, setAssets] = useState<AssetItem[]>(() => dashboardStore.getDataCache<AssetItem[]>("screener:assets") ?? []);
+  const [heatmap, setHeatmap] = useState<HeatmapAssetsResponse | null>(null);
+  const [settings, setSettings] = useState<PineScreenerSettings>(() => canonicalizeScreenerSettings(persistedState.settings));
+  const [draftSettings, setDraftSettings] = useState<PineScreenerSettings>(() => canonicalizeScreenerSettings(persistedState.draftSettings ?? persistedState.settings));
+  const [marketCache, setMarketCache] = useState<Record<string, TimeseriesResponse>>(
+    () => dashboardStore.getDataCache<Record<string, TimeseriesResponse>>("screener:pine:market") ?? {},
+  );
+  const [seasonalityCache, setSeasonalityCache] = useState<Record<string, SeasonalityResponse | null>>(
+    () => dashboardStore.getDataCache<Record<string, SeasonalityResponse | null>>("screener:pine:seasonality") ?? {},
+  );
+  const [compareCache, setCompareCache] = useState<Record<string, TimeseriesResponse>>(
+    () => dashboardStore.getDataCache<Record<string, TimeseriesResponse>>("screener:pine:compare") ?? {},
+  );
+  const [macroSnapshot, setMacroSnapshot] = useState<ScreenerMacroSnapshot | null>(
+    () => dashboardStore.getDataCache<ScreenerMacroSnapshot>("screener:macro:snapshot") ?? null,
+  );
+  const [selectedAssetId, setSelectedAssetId] = useState<string | null>(persistedState.selectedAssetId ?? null);
+  const [sortKey, setSortKey] = useState<ScreenerSortKey>(persistedState.sortKey ?? "default");
+  const [sortDirection, setSortDirection] = useState<ScreenerSortDirection>(persistedState.sortDirection ?? "desc");
+  const [drawerOpen, setDrawerOpen] = useState<boolean>(persistedState.drawerOpen ?? false);
+  const [scanProgress, setScanProgress] = useState<{ active: boolean; total: number; completed: number; startedAt: number }>({
+    active: false,
+    total: 0,
+    completed: 0,
+    startedAt: 0,
+  });
+  const groupDefaultsMigratedRef = useRef(false);
+  const refreshVersion = dashboardStore.getRefreshVersion("screener");
 
   useEffect(() => {
-    let cancelled = false;
-    GlobeApi.getAssets()
-      .then((payload) => {
-        if (!cancelled) setAssets(payload.items);
-      })
-      .catch(() => {
-        if (!cancelled) setAssets([]);
-      });
-    return () => {
-      cancelled = true;
+    const readTheme = () => {
+      try {
+        const stored = window.localStorage.getItem("ivq_globe_gold_theme_v1");
+        setTheme(stored === "0" ? "blue" : "gold");
+      } catch {
+        setTheme("gold");
+      }
     };
+    readTheme();
   }, []);
 
   useEffect(() => {
     let cancelled = false;
-    setLoadingList(true);
-    Promise.all([
-      GlobeApi.getCategoryHeatmap(category, sortBy, source),
-      GlobeApi.getOpportunities(source),
-      GlobeApi.getAlerts(source),
-    ])
-      .then(([nextHeatmap, nextOpportunities, nextAlerts]) => {
+    Promise.all([ensureAssets(refreshVersion > 0), ensureHeatmapAssets(settings.source, settings.timeframe, refreshVersion > 0)])
+      .then(([assetItems, heatmapPayload]) => {
         if (cancelled) return;
-        setHeatmap(nextHeatmap);
-        setOpportunities(nextOpportunities);
-        setAlerts(nextAlerts.items);
-        setSelectedAssetId((current) => (
-          current && nextHeatmap.items.some((item) => item.assetId === current)
-            ? current
-            : (nextHeatmap.items[0]?.assetId ?? "")
-        ));
+        setAssets(assetItems);
+        setHeatmap(heatmapPayload);
       })
       .catch(() => {
         if (cancelled) return;
-        setHeatmap({ updatedAt: "", category, sortBy, categories: [], items: [] });
-        setOpportunities({ updatedAt: "", long: [], short: [] });
-        setAlerts([]);
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingList(false);
+        setAssets([]);
+        setHeatmap(null);
       });
     return () => {
       cancelled = true;
     };
-  }, [category, sortBy, source]);
+  }, [refreshVersion, settings.source, settings.timeframe]);
 
   useEffect(() => {
-    if (!selectedAssetId) {
-      setDetail(null);
-      setTimeseries(null);
+    dashboardStore.setPageState("screener-pine", {
+      settings,
+      draftSettings,
+      selectedAssetId,
+      sortKey,
+      sortDirection,
+      drawerOpen,
+    });
+  }, [dashboardStore, draftSettings, drawerOpen, selectedAssetId, settings, sortDirection, sortKey]);
+
+  useEffect(() => {
+    dashboardStore.setDataCache("screener:pine:market", marketCache);
+  }, [dashboardStore, marketCache]);
+
+  useEffect(() => {
+    dashboardStore.setDataCache("screener:pine:seasonality", seasonalityCache);
+  }, [dashboardStore, seasonalityCache]);
+
+  useEffect(() => {
+    dashboardStore.setDataCache("screener:pine:compare", compareCache);
+  }, [compareCache, dashboardStore]);
+
+  useEffect(() => {
+    if (macroSnapshot) {
+      dashboardStore.setDataCache("screener:macro:snapshot", macroSnapshot);
+    }
+  }, [dashboardStore, macroSnapshot]);
+
+  const availableGroups = useMemo(() => {
+    return Array.from(new Set(assets.map((asset) => assetGroupOf(asset, asset.category)))).sort((left, right) => {
+      const leftDefault = LEGACY_DEFAULT_GROUPS.indexOf(left);
+      const rightDefault = LEGACY_DEFAULT_GROUPS.indexOf(right);
+      if (leftDefault >= 0 && rightDefault >= 0) return leftDefault - rightDefault;
+      if (leftDefault >= 0) return -1;
+      if (rightDefault >= 0) return 1;
+      return left.localeCompare(right);
+    });
+  }, [assets]);
+
+  const assetGroupCounts = useMemo(
+    () =>
+      assets.reduce<Record<string, number>>((counts, asset) => {
+        const group = assetGroupOf(asset, asset.category);
+        counts[group] = (counts[group] ?? 0) + 1;
+        return counts;
+      }, {}),
+    [assets],
+  );
+
+  useEffect(() => {
+    if (!availableGroups.length || groupDefaultsMigratedRef.current) return;
+    const persistedGroups = persistedState.settings?.selectedAssetGroups ?? [];
+    const defaultGroups = defaultSelectedGroupsFromAvailable(availableGroups);
+    const shouldApplyDefaultGroups =
+      persistedGroups.length === 0 ||
+      sameGroupSet(uniqueGroups(persistedGroups), uniqueGroups(LEGACY_DEFAULT_GROUPS)) ||
+      sameGroupSet(uniqueGroups(persistedGroups), uniqueGroups(availableGroups));
+
+    const normalizedSettingsGroups = shouldApplyDefaultGroups
+      ? defaultGroups
+      : normalizeSelectedGroups(settings.selectedAssetGroups, availableGroups);
+    const normalizedDraftGroups = shouldApplyDefaultGroups
+      ? defaultGroups
+      : normalizeSelectedGroups(draftSettings.selectedAssetGroups, availableGroups);
+
+    const settingsChanged = !sameGroupSet(uniqueGroups(settings.selectedAssetGroups), uniqueGroups(normalizedSettingsGroups));
+    const draftChanged = !sameGroupSet(uniqueGroups(draftSettings.selectedAssetGroups), uniqueGroups(normalizedDraftGroups));
+
+    if (settingsChanged) {
+      setSettings((current) => canonicalizeScreenerSettings({ ...current, selectedAssetGroups: normalizedSettingsGroups }));
+    }
+    if (draftChanged) {
+      setDraftSettings((current) => canonicalizeScreenerSettings({ ...current, selectedAssetGroups: normalizedDraftGroups }));
+    }
+    groupDefaultsMigratedRef.current = true;
+  }, [availableGroups, draftSettings.selectedAssetGroups, persistedState.settings?.selectedAssetGroups, settings.selectedAssetGroups]);
+
+  const filteredAssets = useMemo(
+    () => assets.filter((asset) => settings.selectedAssetGroups.includes(assetGroupOf(asset, asset.category))),
+    [assets, settings.selectedAssetGroups],
+  );
+
+  useEffect(() => {
+    const compareSymbols = [settings.compareSymbol1, settings.compareSymbol2, settings.compareSymbol3];
+    let cancelled = false;
+    Promise.all(compareSymbols.map((symbol) => GlobeApi.getReferenceTimeseries(symbol, settings.timeframe, settings.source)))
+      .then((responses) => {
+        if (cancelled) return;
+        setCompareCache((current) => {
+          const next = { ...current };
+          compareSymbols.forEach((symbol, index) => {
+            next[`${settings.source}:${settings.timeframe}:${symbol}`] = responses[index];
+          });
+          return next;
+        });
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [settings.compareSymbol1, settings.compareSymbol2, settings.compareSymbol3, settings.source, settings.timeframe]);
+
+  useEffect(() => {
+    if (!filteredAssets.length) {
+      setScanProgress({ active: false, total: 0, completed: 0, startedAt: 0 });
       return;
     }
     let cancelled = false;
-    setLoadingDetail(true);
-    Promise.all([
-      GlobeApi.getAssetSignalDetail(selectedAssetId, source),
-      GlobeApi.getTimeseries(selectedAssetId, "D", source),
-    ])
-      .then(([nextDetail, nextTimeseries]) => {
-        if (cancelled) return;
-        setDetail(nextDetail);
-        setTimeseries(nextTimeseries);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setDetail(null);
-        setTimeseries(null);
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingDetail(false);
-      });
+    const pendingIds = filteredAssets
+      .map((asset) => asset.id)
+      .filter((assetId) => !marketCache[`${settings.source}:${settings.timeframe}:${assetId}`]);
 
+    if (!pendingIds.length) {
+      setScanProgress({ active: false, total: filteredAssets.length, completed: filteredAssets.length, startedAt: 0 });
+      return;
+    }
+
+    const load = async () => {
+      const total = filteredAssets.length;
+      let completed = total - pendingIds.length;
+      setScanProgress({ active: true, total, completed, startedAt: Date.now() });
+      for (let index = 0; index < pendingIds.length; index += 8) {
+        const batch = pendingIds.slice(index, index + 8);
+        const responses = await Promise.allSettled(
+          batch.map((assetId) =>
+            ensureTimeseries(
+              assetId,
+              settings.timeframe,
+              settings.source,
+              refreshVersion > 0,
+              refreshVersion > 0 ? refreshVersion : undefined,
+            ),
+          ),
+        );
+        if (cancelled) return;
+        setMarketCache((current) => {
+          const next = { ...current };
+          responses.forEach((response, responseIndex) => {
+            if (response.status === "fulfilled") {
+              next[`${settings.source}:${settings.timeframe}:${batch[responseIndex]}`] = response.value;
+            }
+          });
+          return next;
+        });
+        completed += batch.length;
+        setScanProgress((current) => ({
+          active: completed < total,
+          total,
+          completed,
+          startedAt: current.startedAt || Date.now(),
+        }));
+      }
+      if (!cancelled) {
+        setScanProgress((current) => ({ ...current, active: false, total: filteredAssets.length, completed: filteredAssets.length }));
+      }
+    };
+
+    void load();
     return () => {
       cancelled = true;
     };
-  }, [selectedAssetId, source]);
+  }, [filteredAssets, marketCache, refreshVersion, settings.source, settings.timeframe]);
 
-  const filteredItems = useMemo(() => {
-    const items = heatmap?.items ?? [];
-    const term = query.trim().toLowerCase();
-    if (!term) return items;
-    return items.filter((item) => `${item.name} ${item.assetId} ${item.category}`.toLowerCase().includes(term));
-  }, [heatmap?.items, query]);
+  useEffect(() => {
+    let cancelled = false;
+    const refreshMs = 15 * 60 * 1000;
+    const shouldRefresh = !macroSnapshot || (Date.now() - Number(macroSnapshot.fetchedAt ?? 0)) >= refreshMs;
 
-  const selectedItem = useMemo<CategoryHeatmapItem | null>(
-    () => filteredItems.find((item) => item.assetId === selectedAssetId)
-      ?? (heatmap?.items ?? []).find((item) => item.assetId === selectedAssetId)
-      ?? filteredItems[0]
-      ?? null,
-    [filteredItems, heatmap?.items, selectedAssetId],
+    const loadMacro = async () => {
+      try {
+        const [inflation, risk, volatility, fundamental, commodityShock] = await Promise.all([
+          GlobeApi.getInflation(),
+          GlobeApi.getRisk(),
+          GlobeApi.getVolatilityRegime(),
+          GlobeApi.getFundamentalMacro(),
+          GlobeApi.getCommodityShock(),
+        ]);
+        if (cancelled) return;
+        setMacroSnapshot({
+          fetchedAt: Date.now(),
+          inflation: inflation as InflationResponse,
+          risk: risk as RiskResponse | null,
+          volatility: volatility as VolatilityRegimeResponse,
+          fundamental: fundamental as FundamentalOscillatorResponse,
+          commodityShock: commodityShock as CommodityShockResponse,
+        });
+      } catch {
+        if (!cancelled && !macroSnapshot) {
+          setMacroSnapshot({
+            fetchedAt: Date.now(),
+            inflation: null,
+            risk: null,
+            volatility: null,
+            fundamental: null,
+            commodityShock: null,
+          });
+        }
+      }
+    };
+
+    if (shouldRefresh) {
+      void loadMacro();
+    }
+
+    const timer = window.setInterval(() => {
+      void loadMacro();
+    }, refreshMs);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [macroSnapshot]);
+
+  useEffect(() => {
+    if (!selectedAssetId || seasonalityCache[selectedAssetId] !== undefined) return;
+    let cancelled = false;
+    GlobeApi.getSeasonality(selectedAssetId, settings.source)
+      .then((payload) => {
+        if (!cancelled) {
+          setSeasonalityCache((current) => ({ ...current, [selectedAssetId]: payload }));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setSeasonalityCache((current) => ({ ...current, [selectedAssetId]: null }));
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [seasonalityCache, selectedAssetId, settings.source]);
+
+  const heatmapSeasonalityByAsset = useMemo(
+    () => Object.fromEntries((heatmap?.tabs.seasonality.items ?? []).map((item) => [item.assetId, item])),
+    [heatmap?.tabs.seasonality.items],
   );
+
+  const compareSeries = useMemo<CompareSeriesMap | null>(() => {
+    const compare1 = compareCache[`${settings.source}:${settings.timeframe}:${settings.compareSymbol1}`];
+    const compare2 = compareCache[`${settings.source}:${settings.timeframe}:${settings.compareSymbol2}`];
+    const compare3 = compareCache[`${settings.source}:${settings.timeframe}:${settings.compareSymbol3}`];
+    if (!compare1 || !compare2 || !compare3) return null;
+    return {
+      compare1: compare1.ohlcv.map((row) => ({ t: row.t, close: row.close })),
+      compare2: compare2.ohlcv.map((row) => ({ t: row.t, close: row.close })),
+      compare3: compare3.ohlcv.map((row) => ({ t: row.t, close: row.close })),
+      compareLabel1: compareLabel(settings.compareSymbol1),
+      compareLabel2: compareLabel(settings.compareSymbol2),
+      compareLabel3: compareLabel(settings.compareSymbol3),
+    };
+  }, [compareCache, settings.compareSymbol1, settings.compareSymbol2, settings.compareSymbol3, settings.source, settings.timeframe]);
+
+  const rows = useMemo(() => {
+    const base = filteredAssets.map((asset) => {
+      const timeseries = marketCache[`${settings.source}:${settings.timeframe}:${asset.id}`] ?? null;
+      const seasonalityItem = (heatmapSeasonalityByAsset[asset.id] as HeatmapSeasonalityItem | undefined) ?? null;
+      const built = buildScreenerRow(
+        asset.id,
+        asset.name,
+        asset.symbol,
+        asset.category,
+        assetGroupOf(asset, asset.category),
+        timeseries,
+        seasonalityItem,
+        compareSeries,
+        settings,
+        selectedAssetId,
+      );
+      return built ?? loadingRow(asset, selectedAssetId);
+    });
+    const enriched = base.map((row) => ({
+      ...row,
+      ...buildMacroAlignment(row, macroSnapshot),
+    }));
+    return sortScreenerRows(enriched, sortKey, sortDirection);
+  }, [compareSeries, filteredAssets, heatmapSeasonalityByAsset, macroSnapshot, marketCache, selectedAssetId, settings, sortDirection, sortKey]);
+
+  useEffect(() => {
+    if (!rows.length) {
+      setSelectedAssetId(null);
+      return;
+    }
+    if (!selectedAssetId || !rows.some((row) => row.assetId === selectedAssetId)) {
+      setSelectedAssetId(rows[0].assetId);
+    }
+  }, [rows, selectedAssetId]);
 
   const selectedAsset = useMemo(
-    () => assets.find((asset) => asset.id === selectedItem?.assetId) ?? null,
-    [assets, selectedItem?.assetId],
+    () => assets.find((asset) => asset.id === selectedAssetId) ?? null,
+    [assets, selectedAssetId],
+  );
+  const selectedTimeseries = selectedAssetId ? marketCache[`${settings.source}:${settings.timeframe}:${selectedAssetId}`] ?? null : null;
+  const selectedSeasonalityHeatmap = selectedAssetId ? (heatmapSeasonalityByAsset[selectedAssetId] as HeatmapSeasonalityItem | undefined) ?? null : null;
+  const selectedSeasonality = selectedAssetId ? seasonalityCache[selectedAssetId] ?? null : null;
+  const selectedAnalysis = useMemo(
+    () => buildSelectedAnalysis(selectedAssetId ?? "", selectedTimeseries, selectedSeasonality, selectedSeasonalityHeatmap, compareSeries, settings),
+    [compareSeries, selectedAssetId, selectedSeasonality, selectedSeasonalityHeatmap, selectedTimeseries, settings],
   );
 
-  const chartPoints = useMemo(
-    () => (timeseries?.ohlcv ?? []).slice(-160).map((row) => ({ t: row.t, value: row.close })),
-    [timeseries?.ohlcv],
+  const loadedCount = useMemo(
+    () => filteredAssets.filter((asset) => Boolean(marketCache[`${settings.source}:${settings.timeframe}:${asset.id}`])).length,
+    [filteredAssets, marketCache, settings.source, settings.timeframe],
   );
 
-  const liveLong = opportunities?.long ?? [];
-  const liveShort = opportunities?.short ?? [];
+  const scanPercent = useMemo(() => {
+    if (scanProgress.total <= 0) return 0;
+    return Math.max(0, Math.min(100, Math.round((scanProgress.completed / scanProgress.total) * 100)));
+  }, [scanProgress.completed, scanProgress.total]);
+
+  const scanEtaLabel = useMemo(() => {
+    if (!scanProgress.active || scanProgress.completed <= 0 || scanProgress.total <= 0) return "Scan bereit";
+    const elapsedMs = Date.now() - scanProgress.startedAt;
+    const avgMs = elapsedMs / Math.max(scanProgress.completed, 1);
+    const remainingMs = Math.max(0, (scanProgress.total - scanProgress.completed) * avgMs);
+    const remainingSeconds = Math.ceil(remainingMs / 1000);
+    return remainingSeconds > 90 ? `${Math.ceil(remainingSeconds / 60)} min verbleibend` : `${remainingSeconds}s verbleibend`;
+  }, [scanProgress.active, scanProgress.completed, scanProgress.startedAt, scanProgress.total]);
+
+  const handleSort = (key: ScreenerSortKey) => {
+    if (sortKey === key) {
+      setSortDirection((current) => current === "asc" ? "desc" : "asc");
+      return;
+    }
+    setSortKey(key);
+    setSortDirection(key === "asset" || key === "age" ? "asc" : "desc");
+  };
+
+  const handleRestoreDefaultSort = () => {
+    setSortKey("default");
+    setSortDirection("desc");
+  };
+
+  const handleRefresh = () => {
+    dashboardStore.clearDataCache("screener:pine:market");
+    dashboardStore.clearDataCache("screener:pine:seasonality");
+    dashboardStore.clearDataCache("screener:pine:compare");
+    setMarketCache({});
+    setSeasonalityCache({});
+    setCompareCache({});
+    GlobeApi.clearCache((key) => key.includes("/api/assets") || key.includes("/api/reference/timeseries") || key.includes("/timeseries") || key.includes("/seasonality") || key.includes("/heatmap"));
+    dashboardStore.bumpRefreshVersion("screener");
+  };
+
+  const handleApply = () => {
+    setSettings(canonicalizeScreenerSettings(draftSettings));
+  };
 
   return (
-    <main className="ivq-terminal-page">
-      <section className="glass-panel ivq-terminal-hero">
-        <div>
-          <div className="ivq-section-label">Screener</div>
-          <h1 className="ivq-terminal-title">Signal universe and ranking overview</h1>
-          <p className="ivq-terminal-subtitle">
-            Ranking, signal quality and live opportunity monitoring for the existing project universe.
-          </p>
+    <main className="ivq-terminal-page ivq-screener-pine-page">
+      <div className="ivq-screener-page-head">
+        <div className="ivq-screener-page-head__stats">
+          <span>{rows.length} Assets</span>
+          <span>{loadedCount}/{filteredAssets.length} geladen</span>
+          <span>{scanPercent}% Scan</span>
+          <span>{scanEtaLabel}</span>
+          <span>{settings.source === "tradingview" ? "TradingView" : settings.source}</span>
+          <ScreenerSettingsDrawer
+            open={drawerOpen}
+            settings={draftSettings}
+            assetGroups={availableGroups}
+            assetGroupCounts={assetGroupCounts}
+            onToggle={() => setDrawerOpen((current) => !current)}
+            onChange={(next) => setDraftSettings(canonicalizeScreenerSettings(next))}
+            onApply={handleApply}
+            onRefresh={handleRefresh}
+            loadedCount={loadedCount}
+            totalCount={filteredAssets.length}
+            resultCount={rows.length}
+            theme={theme}
+          />
         </div>
-        <div className="ivq-terminal-hero-meta">
-          <div className="ivq-terminal-pill">{heatmap?.updatedAt ? `Updated ${new Date(heatmap.updatedAt).toLocaleString("de-DE")}` : "Waiting for data"}</div>
-          <div className="ivq-terminal-pill">{source.toUpperCase()}</div>
+      </div>
+
+      <section className="glass-panel ivq-screener-progress-card" aria-label="Scan progress">
+        <div className="ivq-screener-progress-card__head">
+          <strong>Live Scan</strong>
+          <span>{scanProgress.completed}/{Math.max(scanProgress.total, filteredAssets.length)} Assets</span>
+        </div>
+        <div className="ivq-screener-progress-bar">
+          <div className="ivq-screener-progress-bar__fill" style={{ width: `${scanPercent}%` }} />
         </div>
       </section>
 
-      <div className="ivq-terminal-grid ivq-terminal-grid--screener">
-        <aside className="space-y-4">
-          <section className="glass-panel">
-            <div className="ivq-section-label">Filters</div>
-            <div className="space-y-3">
-              <label className="ivq-form-row">
-                <span>Search</span>
-                <div className="ivq-input-wrap">
-                  <Search size={14} strokeWidth={1.8} />
-                  <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Ticker or asset" className="ivq-input" />
-                </div>
-              </label>
-              <label className="ivq-form-row">
-                <span>Category</span>
-                <select value={category} onChange={(event) => setCategory(event.target.value)} className="ivq-select">
-                  {(heatmap?.categories?.length ? heatmap.categories : ["FX", "Metals", "Equities", "Crypto", "Energy", "Agriculture", "Softs", "Livestock"]).map((entry) => (
-                    <option key={entry} value={entry}>{entry}</option>
-                  ))}
-                </select>
-              </label>
-              <label className="ivq-form-row">
-                <span>Sort</span>
-                <select value={sortBy} onChange={(event) => setSortBy(event.target.value)} className="ivq-select">
-                  <option value="ai_score">AI Score</option>
-                  <option value="confidence">Confidence</option>
-                  <option value="momentum">Momentum</option>
-                </select>
-              </label>
-              <label className="ivq-form-row">
-                <span>Source</span>
-                <select value={source} onChange={(event) => setSource(event.target.value as DataSource)} className="ivq-select">
-                  <option value="tradingview">TradingView</option>
-                  <option value="dukascopy">Dukascopy</option>
-                  <option value="yahoo">Yahoo</option>
-                </select>
-              </label>
-            </div>
-          </section>
+      <ScreenerHeaderCharts
+        theme={theme}
+        assetName={selectedAsset?.name ?? "Screener"}
+        analysis={selectedAnalysis}
+        settings={settings}
+      />
 
-          <section className="glass-panel">
-            <div className="ivq-section-label">Live Summary</div>
-            <div className="ivq-stat-grid ivq-stat-grid--compact">
-              <div className="ivq-stat-card">
-                <span className="ivq-stat-label">Visible</span>
-                <strong>{filteredItems.length}</strong>
-              </div>
-              <div className="ivq-stat-card">
-                <span className="ivq-stat-label">Long</span>
-                <strong>{liveLong.length}</strong>
-              </div>
-              <div className="ivq-stat-card">
-                <span className="ivq-stat-label">Short</span>
-                <strong>{liveShort.length}</strong>
-              </div>
-              <div className="ivq-stat-card">
-                <span className="ivq-stat-label">Alerts</span>
-                <strong>{alerts.length}</strong>
-              </div>
-            </div>
-          </section>
-
-          <section className="glass-panel">
-            <div className="ivq-section-label">Opportunity Flow</div>
-            <div className="space-y-2">
-              {[...liveLong.map((item) => ({ ...item, side: "LONG" })), ...liveShort.map((item) => ({ ...item, side: "SHORT" }))].slice(0, 8).map((item) => (
-                <button key={`${item.side}-${item.assetId}`} type="button" className="ivq-list-row" onClick={() => setSelectedAssetId(item.assetId)}>
-                  <div className="flex items-center gap-2">
-                    <span className={`ivq-list-icon ${item.side === "LONG" ? "is-positive" : "is-negative"}`}>
-                      {item.side === "LONG" ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
-                    </span>
-                    <div>
-                      <div className="text-sm font-semibold text-slate-100">{item.name}</div>
-                      <div className="text-[11px] text-slate-400">{item.category}</div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className={`text-sm font-semibold ${scoreTone(item.aiScore)}`}>{item.aiScore.toFixed(0)}</div>
-                    <div className="text-[11px] text-slate-400">{item.confidenceScore.toFixed(0)} conf.</div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </section>
-        </aside>
-
-        <section className="space-y-4">
-          <section className="glass-panel">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <div>
-                <div className="ivq-section-label">Ranking</div>
-                <div className="text-sm text-slate-400">{loadingList ? "Refreshing screener universe..." : `${filteredItems.length} ranked assets`}</div>
-              </div>
-              <div className="ivq-terminal-pill">{heatmap?.category ?? category}</div>
-            </div>
-
-            <div className="ivq-data-table-wrap">
-              <table className="ivq-data-table">
-                <thead>
-                  <tr>
-                    <th>Asset</th>
-                    <th>AI</th>
-                    <th>Confidence</th>
-                    <th>Momentum</th>
-                    <th>Signal</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredItems.map((item) => {
-                    const asset = assets.find((entry) => entry.id === item.assetId);
-                    const active = item.assetId === selectedItem?.assetId;
-                    return (
-                      <tr key={item.assetId} className={active ? "is-active" : ""} onClick={() => setSelectedAssetId(item.assetId)}>
-                        <td>
-                          <div className="flex items-center gap-2">
-                            <AssetIcon iconKey={asset?.iconKey ?? "stock"} category={asset?.category ?? item.category} assetName={item.name} />
-                            <div>
-                              <div className="font-semibold text-slate-100">{item.name}</div>
-                              <div className="text-[11px] text-slate-400">{item.category}</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className={scoreTone(item.aiScore)}>{item.aiScore.toFixed(0)}</td>
-                        <td>{item.confidenceScore.toFixed(0)}</td>
-                        <td>{item.momentum.toFixed(1)}</td>
-                        <td>
-                          <span className={`ivq-tone-chip ${toneChip(item.tone)}`}>{item.signalQuality}</span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </section>
-
-          <div className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
-            <section className="glass-panel">
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <div>
-                  <div className="ivq-section-label">Selected Asset</div>
-                  <div className="flex items-center gap-2 text-lg font-semibold text-slate-100">
-                    {selectedAsset ? <AssetIcon iconKey={selectedAsset.iconKey} category={selectedAsset.category} assetName={selectedAsset.name} className="!h-[18px] !w-[18px]" /> : null}
-                    <span>{selectedItem?.name ?? "No selection"}</span>
-                  </div>
-                </div>
-                {selectedItem ? <span className={`ivq-tone-chip ${toneChip(selectedItem.tone)}`}>{selectedItem.tone.replace("_", " ")}</span> : null}
-              </div>
-
-              <div className="mb-4 grid gap-3 sm:grid-cols-3">
-                <div className="ivq-stat-card">
-                  <span className="ivq-stat-label">AI Score</span>
-                  <strong className={scoreTone(selectedItem?.aiScore ?? 50)}>{selectedItem?.aiScore?.toFixed(0) ?? "--"}</strong>
-                </div>
-                <div className="ivq-stat-card">
-                  <span className="ivq-stat-label">Confidence</span>
-                  <strong>{selectedItem?.confidenceScore?.toFixed(0) ?? "--"}</strong>
-                </div>
-                <div className="ivq-stat-card">
-                  <span className="ivq-stat-label">Momentum</span>
-                  <strong>{selectedItem?.momentum?.toFixed(1) ?? "--"}</strong>
-                </div>
-              </div>
-
-              <div className="h-[280px]">
-                <SimpleLineChart
-                  points={chartPoints}
-                  tone={selectedItem?.aiScore != null && selectedItem.aiScore >= 50 ? "#39ff40" : "#ff384c"}
-                  fillTone={selectedItem?.aiScore != null && selectedItem.aiScore >= 50 ? "rgba(57,255,64,0.18)" : "rgba(255,56,76,0.18)"}
-                  valueFormatter={(value) => value.toFixed(2)}
-                />
-              </div>
-              {loadingDetail ? <div className="mt-3 text-sm text-slate-400">Loading signal detail...</div> : null}
-            </section>
-
-            <section className="glass-panel">
-              <div className="ivq-section-label">Signal Detail</div>
-              {detail ? (
-                <div className="space-y-4">
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="ivq-stat-card">
-                      <span className="ivq-stat-label">Signal Quality</span>
-                      <strong>{detail.signalQuality}</strong>
-                    </div>
-                    <div className="ivq-stat-card">
-                      <span className="ivq-stat-label">Confidence Score</span>
-                      <strong>{detail.confidenceScore.toFixed(0)}</strong>
-                    </div>
-                  </div>
-
-                  <div className="grid gap-2">
-                    {Object.entries(detail.components).map(([key, value]) => (
-                      <div key={key} className="ivq-progress-row">
-                        <span>{key}</span>
-                        <div className="ivq-progress-track">
-                          <div className="ivq-progress-fill" style={{ width: `${Math.max(0, Math.min(100, Number(value)))}%` }} />
-                        </div>
-                        <strong>{Number(value).toFixed(0)}</strong>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="space-y-2">
-                    {detail.whySignal.map((row) => (
-                      <div key={`${row.label}-${row.value}`} className="ivq-list-row is-static">
-                        <div className="text-sm font-semibold text-slate-100">{row.label}</div>
-                        <div className="text-sm text-slate-300">{row.value}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <div className="grid h-full min-h-[220px] place-items-center text-sm text-slate-400">Select an asset to inspect signal internals.</div>
-              )}
-            </section>
-          </div>
-
-          <section className="glass-panel">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <div className="ivq-section-label mb-0">Market Alerts</div>
-              <AlertTriangle size={14} className="text-amber-200" />
-            </div>
-            <div className="grid gap-2 lg:grid-cols-2">
-              {alerts.slice(0, 8).map((alert) => (
-                <button key={`${alert.assetId}-${alert.title}`} type="button" className="ivq-list-row" onClick={() => setSelectedAssetId(alert.assetId)}>
-                  <div>
-                    <div className="text-sm font-semibold text-slate-100">{alert.title}</div>
-                    <div className="text-[11px] text-slate-400">{alert.assetId}</div>
-                  </div>
-                  <span className={`ivq-tone-chip ${toneChip(alert.tone)}`}>{alert.tone}</span>
-                </button>
-              ))}
-            </div>
-          </section>
-        </section>
-      </div>
+      <ScreenerTable
+        rows={rows}
+        sortKey={sortKey}
+        sortDirection={sortDirection}
+        onSort={handleSort}
+        onRestoreDefaultSort={handleRestoreDefaultSort}
+        onSelectAsset={setSelectedAssetId}
+        theme={theme}
+      />
     </main>
   );
 }

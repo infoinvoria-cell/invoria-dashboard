@@ -33,7 +33,9 @@ export default function KpiCard({
 }: Props) {
   const palette = getTrackRecordThemePalette(theme);
   const sparkColor = tone === "negative" ? palette.negative : tone === "success" ? palette.success : palette.accent;
-  const hasSparklineLayout = Boolean(!children && sparkline && score == null);
+  const hasCustomContent = Boolean(children);
+  const hasSparklineLayout = Boolean(!hasCustomContent && sparkline && score == null);
+  const labelColor = theme === "dark" ? palette.accent : palette.heading;
   const valueColor =
     tone === "negative"
       ? palette.negative
@@ -68,7 +70,7 @@ export default function KpiCard({
 
       <div className="relative z-[1] mb-1.5 flex items-start justify-between gap-2">
         <div>
-          <div className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: palette.heading }}>
+          <div className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: labelColor }}>
             {title}
           </div>
           <div className="mt-2 text-[20px] font-semibold leading-none min-[769px]:text-[22px]" style={{ color: valueColor }}>
@@ -79,9 +81,9 @@ export default function KpiCard({
           <div
             className="rounded-full border px-2 py-0.5 text-[8px] font-semibold uppercase tracking-[0.14em]"
             style={{
-              borderColor: "rgba(111,165,255,0.34)",
-              background: "rgba(17,45,108,0.78)",
-              color: "#ffffff",
+              borderColor: theme === "dark" ? "rgba(214,195,143,0.34)" : "rgba(111,165,255,0.34)",
+              background: theme === "dark" ? "rgba(68,52,24,0.78)" : "rgba(17,45,108,0.78)",
+              color: theme === "dark" ? "#fff3cf" : "#ffffff",
             }}
           >
             {rating}
@@ -89,7 +91,7 @@ export default function KpiCard({
         ) : null}
       </div>
 
-      <div className="relative z-[1] flex min-h-0 flex-1 flex-col">
+      <div className="relative z-[1] flex min-h-0 flex-1 flex-col overflow-visible">
         {children}
 
         {hasSparklineLayout ? (
@@ -131,7 +133,7 @@ export default function KpiCard({
         ) : null}
 
         {footer && !hasSparklineLayout ? (
-          <div className="mt-1.5 text-[10px] leading-4" style={{ color: palette.muted }}>
+          <div className={hasCustomContent ? "mt-auto pt-1 text-[10px] leading-4" : "mt-1.5 text-[10px] leading-4"} style={{ color: palette.muted }}>
             {footer}
           </div>
         ) : null}
