@@ -5,15 +5,15 @@ import type { TrackRecordTradeInput, TradeDirection } from "@/components/track-r
 
 const HISTORICAL_DATASET_PATH = path.join(
   process.cwd(),
-  "..",
-  "live track record",
+  "data",
+  "track-record",
   "trades_clean_compounded.csv",
 );
 const APPENDED_DATASET_PATH = path.join(
   process.cwd(),
-  "..",
-  "live track record",
-  "trades_appended_api.json",
+  "data",
+  "track-record",
+  "trades_appended_api.json"
 );
 
 type StoredTrade = {
