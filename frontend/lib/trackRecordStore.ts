@@ -9,11 +9,12 @@ const HISTORICAL_DATASET_PATH = path.join(
   "track-record",
   "trades_clean_compounded.csv",
 );
+
 const APPENDED_DATASET_PATH = path.join(
   process.cwd(),
   "data",
   "track-record",
-  "trades_appended_api.json"
+  "trades_appended_api.json",
 );
 
 type StoredTrade = {
