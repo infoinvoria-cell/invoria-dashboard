@@ -340,6 +340,6 @@ export const GlobeApi = {
     return fetchJson<DiagnosticsResponse>(endpoint("/api/diagnostics"), 60 * 1000);
   },
   getTrackRecord(): Promise<TrackRecordResponse> {
-    return fetchJson<TrackRecordResponse>(endpoint("/api/track-record"), 5 * 60 * 1000);
+    return fetchJson<TrackRecordResponse>(endpoint("/api/track-record/trades"), 5 * 60 * 1000);
   },
 };
