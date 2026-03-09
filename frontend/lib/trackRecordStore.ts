@@ -5,9 +5,10 @@ import type { TrackRecordTradeInput, TradeDirection } from "@/components/track-r
 
 const HISTORICAL_DATASET_PATH = path.join(
   process.cwd(),
+  "frontend",
   "data",
   "track-record",
-  "trades_clean_compounded.csv",
+  "trades_clean_compounded.csv"
 );
 
 const APPENDED_DATASET_PATH = path.join(
@@ -61,8 +62,10 @@ export async function loadHistoricalTrackRecordTrades(): Promise<TrackRecordTrad
   if (lines.length <= 1) return [];
 
   return lines.slice(1).map((line, index) => {
-    const [closeDate, gainValue] = line.split(",");
-    const returnPct = Number.parseFloat(gainValue);
+    const [closeDateRaw, gainRaw] = line.split(",");
+
+    const closeDate = closeDateRaw.trim();
+    const returnPct = Number.parseFloat(gainRaw.replace("%", "").trim());
 
     return {
       date: normalizeDate(closeDate),
