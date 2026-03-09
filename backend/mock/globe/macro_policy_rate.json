@@ -1,0 +1,13 @@
+{
+  "updatedAt": "2026-03-03T00:00:00Z",
+  "countryPolicyRate": {
+    "United States": { "rate": 5.50, "change": 0.00, "lastMove": "hold" },
+    "Europe": { "rate": 3.75, "change": -0.25, "lastMove": "down" },
+    "Japan": { "rate": 0.25, "change": 0.10, "lastMove": "up" },
+    "United Kingdom": { "rate": 4.75, "change": 0.00, "lastMove": "hold" },
+    "Switzerland": { "rate": 1.25, "change": -0.25, "lastMove": "down" },
+    "Australia": { "rate": 4.35, "change": 0.00, "lastMove": "hold" },
+    "Canada": { "rate": 4.25, "change": 0.00, "lastMove": "hold" },
+    "New Zealand": { "rate": 5.25, "change": 0.00, "lastMove": "hold" }
+  }
+}

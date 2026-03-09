@@ -1,0 +1,11 @@
+{
+  "updatedAt": "2026-03-03T00:00:00Z",
+  "volScore": 58.4,
+  "regime": "Neutral",
+  "formula": "0.40*z(VIX) + 0.35*z(MOVE) + 0.25*z(CreditSpreadProxy)",
+  "components": {
+    "VIX": 0.46,
+    "MOVE": 0.58,
+    "CreditSpreadProxy": 0.33
+  }
+}

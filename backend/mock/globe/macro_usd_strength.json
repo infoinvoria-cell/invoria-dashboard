@@ -1,0 +1,19 @@
+{
+  "updatedAt": "2026-03-03T00:00:00Z",
+  "usdScore": 0.22,
+  "formula": "0.35*z(DXY)+0.25*z(US10Y)+0.20*z(RealYield)+0.20*z(SPX_vs_EM)",
+  "components": {
+    "DXY": 0.41,
+    "US10Y": 0.23,
+    "RealYield": 0.18,
+    "SPX_vs_EM": 0.06
+  },
+  "regions": {
+    "North America": 0.32,
+    "Europe": 0.28,
+    "Asia": 0.19,
+    "South America": 0.14,
+    "Africa": 0.17,
+    "Middle East": 0.21
+  }
+}

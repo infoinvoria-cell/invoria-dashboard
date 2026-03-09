@@ -1,0 +1,13 @@
+{
+  "updatedAt": "2026-03-03T00:00:00Z",
+  "riskScore": 63.0,
+  "riskMode": "Moderate Risk-On",
+  "formula": "0.30*z(VIX inverse)+0.25*z(SPX momentum)+0.20*z(Credit inverse)+0.15*z(HighBeta_vs_LowBeta)+0.10*z(Copper_Gold)",
+  "components": {
+    "VIX_inverse": 0.45,
+    "SPX_momentum": 0.28,
+    "Credit_inverse": 0.16,
+    "HighBeta_vs_LowBeta": 0.09,
+    "Copper_Gold": 0.05
+  }
+}
