@@ -47,7 +47,7 @@ export default function KpiCard({
 
   return (
     <article
-      className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-[20px] border p-[18px] backdrop-blur-[20px]"
+      className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-[22px] border p-4 backdrop-blur-[20px] min-[769px]:rounded-[20px] min-[769px]:p-[18px]"
       style={{
         background: palette.panelBackground,
         borderColor: palette.panelBorder,
@@ -73,7 +73,7 @@ export default function KpiCard({
           <div className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: labelColor }}>
             {title}
           </div>
-          <div className="mt-2 text-[20px] font-semibold leading-none min-[769px]:text-[22px]" style={{ color: valueColor }}>
+          <div className="mt-2 text-[18px] font-semibold leading-none min-[390px]:text-[20px] min-[769px]:text-[22px]" style={{ color: valueColor }}>
             {value}
           </div>
         </div>
@@ -95,9 +95,9 @@ export default function KpiCard({
         {children}
 
         {hasSparklineLayout ? (
-          <div className="grid min-h-0 flex-1 grid-cols-1 items-center gap-3 min-[769px]:grid-cols-[minmax(0,1fr)_minmax(110px,0.92fr)]">
+          <div className="grid min-h-0 flex-1 grid-cols-1 items-center gap-2.5 min-[769px]:gap-3 min-[769px]:grid-cols-[minmax(0,1fr)_minmax(110px,0.92fr)]">
             <div className="min-w-0">
-              <div className="text-[10px] leading-4" style={{ color: palette.muted }}>
+              <div className="text-[9px] leading-4 min-[769px]:text-[10px]" style={{ color: palette.muted }}>
                 {footer}
               </div>
             </div>
@@ -133,7 +133,7 @@ export default function KpiCard({
         ) : null}
 
         {footer && !hasSparklineLayout ? (
-          <div className={hasCustomContent ? "mt-auto pt-1 text-[10px] leading-4" : "mt-1.5 text-[10px] leading-4"} style={{ color: palette.muted }}>
+          <div className={hasCustomContent ? "mt-auto pt-1 text-[9px] leading-4 min-[769px]:text-[10px]" : "mt-1.5 text-[9px] leading-4 min-[769px]:text-[10px]"} style={{ color: palette.muted }}>
             {footer}
           </div>
         ) : null}

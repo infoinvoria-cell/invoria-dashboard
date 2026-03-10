@@ -1213,6 +1213,10 @@ body.ivq-theme-gold .ivq-progress-fill {
     padding: 72px 14px 22px;
   }
 
+  .ivq-track-record-page {
+    padding-top: 96px;
+  }
+
   .ivq-screener-table {
     min-width: 1440px;
   }

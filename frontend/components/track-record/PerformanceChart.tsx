@@ -89,6 +89,7 @@ export default function PerformanceChart({
   isRefreshing = false,
 }: Props) {
   const [mounted, setMounted] = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [compareMenuOpen, setCompareMenuOpen] = useState(false);
   const compareMenuRef = useRef<HTMLDivElement | null>(null);
   const palette = getTrackRecordThemePalette(theme);
@@ -101,6 +102,27 @@ export default function PerformanceChart({
 
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const media = window.matchMedia("(max-width: 768px)");
+    const legacyMedia = media as MediaQueryList & {
+      addListener?: (listener: (event: MediaQueryListEvent) => void) => void;
+      removeListener?: (listener: (event: MediaQueryListEvent) => void) => void;
+    };
+    const apply = (matches: boolean) => {
+      setIsMobileViewport(matches);
+    };
+
+    apply(media.matches);
+    const onChange = (event: MediaQueryListEvent) => apply(event.matches);
+    if ("addEventListener" in media) {
+      media.addEventListener("change", onChange);
+      return () => media.removeEventListener("change", onChange);
+    }
+    legacyMedia.addListener?.(onChange);
+    return () => legacyMedia.removeListener?.(onChange);
   }, []);
 
   useEffect(() => {
@@ -228,7 +250,7 @@ export default function PerformanceChart({
 
   return (
     <section
-      className="relative flex h-full min-h-0 flex-col overflow-visible rounded-[24px] border px-4 pb-5 pt-3.5 backdrop-blur-[20px] min-[769px]:px-5 min-[769px]:pb-6 min-[769px]:pt-4"
+      className="relative flex h-full min-h-0 flex-col overflow-visible rounded-[28px] border px-4 pb-5 pt-3.5 backdrop-blur-[20px] min-[769px]:px-5 min-[769px]:pb-6 min-[769px]:pt-4"
       style={{
         background: palette.panelBackgroundStrong,
         borderColor: palette.panelBorder,
@@ -423,7 +445,7 @@ export default function PerformanceChart({
         </div>
       </div>
 
-      <div className="relative z-[1] min-h-[336px] flex-1 overflow-visible pb-4 min-[769px]:min-h-[436px] min-[769px]:pb-5">
+      <div className="relative z-[1] min-h-[348px] flex-1 overflow-visible pb-4 min-[769px]:min-h-[436px] min-[769px]:pb-5">
         {sortedActiveComparisons.length ? (
           <div className="mb-2 flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.1em]">
             {sortedActiveComparisons.map((comparison) => {
@@ -445,80 +467,109 @@ export default function PerformanceChart({
             })}
           </div>
         ) : null}
-        {mounted ? (
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={visibleChartData} margin={{ top: 14, right: activeLines.length > 3 ? 132 : 92, left: 0, bottom: 18 }}>
-              <defs>
-                <filter id="track-record-end-glow" x="-40%" y="-40%" width="180%" height="180%">
-                  <feGaussianBlur stdDeviation="4" result="blur" />
-                  <feMerge>
-                    <feMergeNode in="blur" />
-                    <feMergeNode in="SourceGraphic" />
-                  </feMerge>
-                </filter>
-              </defs>
-              <CartesianGrid stroke={palette.grid} strokeDasharray="2 8" vertical={false} />
-              <XAxis
-                dataKey="date"
-                minTickGap={28}
-                tickMargin={16}
-                height={34}
-                stroke={palette.grid}
-                tick={{ fill: palette.muted, fontSize: 12 }}
-              />
-              <YAxis
-                width={68}
-                tickMargin={10}
-                stroke={palette.grid}
-                tick={{ fill: palette.muted, fontSize: 12 }}
-                tickFormatter={(value: number) => `${Math.round(value)}%`}
-              />
-              <Tooltip
-                contentStyle={{
-                  borderRadius: 16,
-                  border: `1px solid ${palette.panelBorder}`,
-                  background: "rgba(7,10,15,0.96)",
-                  boxShadow: "0 20px 40px rgba(0,0,0,0.45)",
+        <div
+          className="relative h-full overflow-hidden rounded-[24px] border px-1.5 pb-2 pt-2 min-[769px]:rounded-[26px] min-[769px]:px-3 min-[769px]:pb-3 min-[769px]:pt-3"
+          style={{
+            borderColor: palette.panelBorder,
+            background:
+              theme === "dark"
+                ? "linear-gradient(180deg, rgba(8,10,14,0.88) 0%, rgba(5,7,10,0.78) 100%)"
+                : "linear-gradient(180deg, rgba(5,12,22,0.86) 0%, rgba(4,8,16,0.78) 100%)",
+            boxShadow: `inset 0 1px 0 ${theme === "dark" ? "rgba(255,243,212,0.08)" : "rgba(218,232,255,0.08)"}`,
+          }}
+        >
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{
+              background:
+                theme === "dark"
+                  ? "radial-gradient(520px 240px at 8% 10%, rgba(214,195,143,0.15), transparent 58%), radial-gradient(360px 180px at 88% 92%, rgba(214,195,143,0.10), transparent 62%)"
+                  : "radial-gradient(520px 240px at 8% 10%, rgba(77,135,254,0.15), transparent 58%), radial-gradient(360px 180px at 88% 92%, rgba(77,135,254,0.10), transparent 62%)",
+            }}
+          />
+          {mounted ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart
+                data={visibleChartData}
+                margin={{
+                  top: isMobileViewport ? 10 : 14,
+                  right: isMobileViewport ? (activeLines.length > 3 ? 98 : 78) : (activeLines.length > 3 ? 132 : 92),
+                  left: isMobileViewport ? -10 : 0,
+                  bottom: isMobileViewport ? 30 : 18,
                 }}
-                labelStyle={{ color: palette.heading, fontWeight: 600 }}
-                formatter={(value, name) => [formatSignedPercent(Number(value ?? 0) / 100), String(name ?? "")]}
-              />
-              {activeLines.map((line, activeIndex) => (
-                <Line
-                  key={line.id}
-                  type={chartLineType}
-                  dataKey={line.dataKey}
-                  name={line.label}
-                  stroke={line.stroke}
-                  strokeWidth={line.width}
-                  strokeOpacity={1}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeDasharray={line.dashed ? "7 5" : undefined}
-                  dot={createLastPointRenderer(line, activeIndex)}
-                  activeDot={{ r: 4, fill: line.stroke, stroke: "#0b0f14", strokeWidth: 2 }}
-                  isAnimationActive={false}
-                  connectNulls
-                  style={
-                    line.glow
-                      ? {
-                          filter:
-                            theme === "dark"
-                              ? "drop-shadow(0 0 10px rgba(245,212,123,0.48))"
-                              : "drop-shadow(0 0 10px rgba(77,200,255,0.44))",
-                        }
-                      : undefined
-                  }
+              >
+                <defs>
+                  <filter id="track-record-end-glow" x="-40%" y="-40%" width="180%" height="180%">
+                    <feGaussianBlur stdDeviation="4" result="blur" />
+                    <feMerge>
+                      <feMergeNode in="blur" />
+                      <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                  </filter>
+                </defs>
+                <CartesianGrid stroke={palette.grid} strokeDasharray="2 8" vertical={false} />
+                <XAxis
+                  dataKey="date"
+                  minTickGap={isMobileViewport ? 22 : 28}
+                  tickMargin={isMobileViewport ? 12 : 16}
+                  height={isMobileViewport ? 30 : 34}
+                  stroke={palette.grid}
+                  tick={{ fill: palette.muted, fontSize: isMobileViewport ? 10 : 12 }}
                 />
-              ))}
-            </LineChart>
-          </ResponsiveContainer>
-        ) : (
-          <div className="h-full rounded-[20px] border" style={{ borderColor: palette.panelBorder, background: "rgba(7,10,15,0.72)" }} />
-        )}
+                <YAxis
+                  width={isMobileViewport ? 52 : 68}
+                  tickMargin={isMobileViewport ? 8 : 10}
+                  stroke={palette.grid}
+                  tick={{ fill: palette.muted, fontSize: isMobileViewport ? 10 : 12 }}
+                  tickFormatter={(value: number) => `${Math.round(value)}%`}
+                />
+                <Tooltip
+                  contentStyle={{
+                    borderRadius: 16,
+                    border: `1px solid ${palette.panelBorder}`,
+                    background: "rgba(7,10,15,0.96)",
+                    boxShadow: "0 20px 40px rgba(0,0,0,0.45)",
+                  }}
+                  labelStyle={{ color: palette.heading, fontWeight: 600 }}
+                  formatter={(value, name) => [formatSignedPercent(Number(value ?? 0) / 100), String(name ?? "")]}
+                />
+                {activeLines.map((line, activeIndex) => (
+                  <Line
+                    key={line.id}
+                    type={chartLineType}
+                    dataKey={line.dataKey}
+                    name={line.label}
+                    stroke={line.stroke}
+                    strokeWidth={line.width}
+                    strokeOpacity={1}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeDasharray={line.dashed ? "7 5" : undefined}
+                    dot={createLastPointRenderer(line, activeIndex)}
+                    activeDot={{ r: 4, fill: line.stroke, stroke: "#0b0f14", strokeWidth: 2 }}
+                    isAnimationActive={false}
+                    connectNulls
+                    style={
+                      line.glow
+                        ? {
+                            filter:
+                              theme === "dark"
+                                ? "drop-shadow(0 0 10px rgba(245,212,123,0.48))"
+                                : "drop-shadow(0 0 10px rgba(77,200,255,0.44))",
+                          }
+                        : undefined
+                    }
+                  />
+                ))}
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-full rounded-[20px] border" style={{ borderColor: palette.panelBorder, background: "rgba(7,10,15,0.72)" }} />
+          )}
 
-        <div className="pointer-events-none absolute bottom-11 right-4 z-[2] min-[769px]:bottom-12 min-[769px]:right-5">
-          <img src={palette.watermarkLogo} alt="" className="h-8 w-auto opacity-38 min-[769px]:h-11" />
+          <div className="pointer-events-none absolute bottom-16 right-4 z-[2] min-[769px]:bottom-14 min-[769px]:right-5">
+            <img src={palette.watermarkLogo} alt="" className="h-6 w-auto opacity-30 min-[769px]:h-10 min-[769px]:opacity-35" />
+          </div>
         </div>
       </div>
     </section>
