@@ -1,4 +1,4 @@
-import { promises as fs } from "fs";
+
 import path from "path";
 
 import type { TrackRecordTradeInput, TradeDirection } from "@/components/track-record/metrics";
@@ -16,7 +16,6 @@ const APPENDED_DATASET_PATH = path.join(
   "track-record",
   "trades_appended_api.json"
 );
-
 console.log("TRACK RECORD PATH:", HISTORICAL_DATASET_PATH);
 
 type StoredTrade = {
@@ -54,27 +53,31 @@ function tradeKey(trade: Pick<TrackRecordTradeInput, "date" | "return_pct" | "tr
 }
 
 export async function loadHistoricalTrackRecordTrades(): Promise<TrackRecordTradeInput[]> {
-  const content = await fs.readFile(HISTORICAL_DATASET_PATH, "utf8");
-  const lines = content
-    .split(/\r?\n/)
-    .map((line) => line.trim())
+
+  const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/track-record/trades_clean_compounded.csv`);
+
+  const text = await res.text();
+
+  const lines = text
+    .split("\n")
+    .map(l => l.trim())
     .filter(Boolean);
 
   if (lines.length <= 1) return [];
 
   return lines.slice(1).map((line, index) => {
-    const [closeDateRaw, gainRaw] = line.split(",");
 
-    const closeDate = closeDateRaw.trim();
-    const returnPct = Number.parseFloat(gainRaw.replace("%", "").trim());
+    const [closeDate, gainValue] = line.split(",");
+
+    const returnPct = Number.parseFloat(gainValue);
 
     return {
-      date: normalizeDate(closeDate),
+      date: new Date(closeDate).toISOString(),
       return_pct: returnPct,
       trade_result: returnPct,
       trade_direction: deriveDirection(closeDate, index),
-      source: "historical",
-    } satisfies TrackRecordTradeInput;
+      source: "historical"
+    };
   });
 }
 
