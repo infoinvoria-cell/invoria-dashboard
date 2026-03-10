@@ -3,21 +3,22 @@ import path from "path";
 
 import type { TrackRecordTradeInput, TradeDirection } from "@/components/track-record/metrics";
 
-const HISTORICAL_DATASET_PATH = path.join(
-  process.cwd(),
-  "frontend",
-  "data",
-  "track-record",
-  "trades_clean_compounded.csv"
+const ROOT_CANDIDATES = Array.from(
+  new Set([
+    process.cwd(),
+    path.join(process.cwd(), "frontend"),
+  ]),
 );
 
-const APPENDED_DATASET_PATH = path.join(
-  process.cwd(),
-  "frontend",
-  "data",
-  "track-record",
-  "trades_appended_api.json"
-);
+const HISTORICAL_DATASET_RELATIVE_PATHS = [
+  path.join("data", "track-record", "trades_clean_compounded.csv"),
+  path.join("public", "track-record", "trades_clean_compounded.csv"),
+];
+
+const APPENDED_DATASET_RELATIVE_PATHS = [
+  path.join("data", "track-record", "trades_appended_api.json"),
+  path.join("public", "track-record", "trades_appended_api.json"),
+];
 
 type StoredTrade = {
   date: string;
@@ -26,6 +27,93 @@ type StoredTrade = {
   trade_direction: TradeDirection;
   source: "api";
 };
+
+function buildCandidatePaths(relativePaths: string[]): string[] {
+  const candidates: string[] = [];
+
+  for (const root of ROOT_CANDIDATES) {
+    for (const relativePath of relativePaths) {
+      candidates.push(path.join(root, relativePath));
+    }
+  }
+
+  return Array.from(new Set(candidates));
+}
+
+async function fileExists(filePath: string): Promise<boolean> {
+  try {
+    await fs.access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function resolveExistingPath(relativePaths: string[]): Promise<string | null> {
+  const candidates = buildCandidatePaths(relativePaths);
+
+  for (const candidate of candidates) {
+    if (await fileExists(candidate)) {
+      return candidate;
+    }
+  }
+
+  return null;
+}
+
+async function resolveWritablePath(relativePaths: string[]): Promise<string> {
+  const candidates = buildCandidatePaths(relativePaths);
+
+  for (const candidate of candidates) {
+    if (await fileExists(candidate)) {
+      return candidate;
+    }
+  }
+
+  for (const candidate of candidates) {
+    if (await fileExists(path.dirname(candidate))) {
+      return candidate;
+    }
+  }
+
+  return candidates[0];
+}
+
+function parseCsvRow(line: string): string[] {
+  const values: string[] = [];
+  let current = "";
+  let inQuotes = false;
+
+  for (let index = 0; index < line.length; index += 1) {
+    const char = line[index];
+
+    if (char === "\"") {
+      if (inQuotes && line[index + 1] === "\"") {
+        current += "\"";
+        index += 1;
+        continue;
+      }
+
+      inQuotes = !inQuotes;
+      continue;
+    }
+
+    if (char === "," && !inQuotes) {
+      values.push(current.trim());
+      current = "";
+      continue;
+    }
+
+    current += char;
+  }
+
+  values.push(current.trim());
+  return values;
+}
+
+function normalizeHeader(value: string): string {
+  return value.replace(/^\uFEFF/, "").trim().toLowerCase();
+}
 
 function normalizeDate(value: string): string {
   const parsed = new Date(value);
@@ -56,9 +144,18 @@ function tradeKey(
 }
 
 export async function loadHistoricalTrackRecordTrades(): Promise<TrackRecordTradeInput[]> {
-  console.log("TRACK RECORD CSV PATH:", HISTORICAL_DATASET_PATH);
+  const historicalPath = await resolveExistingPath(HISTORICAL_DATASET_RELATIVE_PATHS);
+
+  if (!historicalPath) {
+    console.error("TRACK RECORD CSV ERROR: historical dataset not found", {
+      cwd: process.cwd(),
+      candidates: buildCandidatePaths(HISTORICAL_DATASET_RELATIVE_PATHS),
+    });
+    return [];
+  }
+
   try {
-    const content = await fs.readFile(HISTORICAL_DATASET_PATH, "utf8");
+    const content = await fs.readFile(historicalPath, "utf8");
 
     const lines = content
       .split(/\r?\n/)
@@ -67,28 +164,67 @@ export async function loadHistoricalTrackRecordTrades(): Promise<TrackRecordTrad
 
     if (lines.length <= 1) return [];
 
-    return lines.slice(1).map((line, index) => {
-      const [closeDate, gainValue] = line.split(",");
+    const header = parseCsvRow(lines[0]).map(normalizeHeader);
+    const closeDateIndex = header.indexOf("close date");
+    const gainIndex = header.indexOf("gain (%)");
 
+    if (closeDateIndex === -1 || gainIndex === -1) {
+      console.error("TRACK RECORD CSV ERROR: required headers missing", {
+        path: historicalPath,
+        header,
+      });
+      return [];
+    }
+
+    const trades: TrackRecordTradeInput[] = [];
+
+    lines.slice(1).forEach((line, index) => {
+      const columns = parseCsvRow(line);
+      const closeDate = columns[closeDateIndex];
+      const gainValue = columns[gainIndex];
       const returnPct = Number.parseFloat(gainValue);
 
-      return {
-        date: normalizeDate(closeDate),
-        return_pct: returnPct,
-        trade_result: returnPct,
-        trade_direction: deriveDirection(closeDate, index),
-        source: "historical",
-      };
+      if (!closeDate || !Number.isFinite(returnPct)) {
+        return;
+      }
+
+      try {
+        const date = normalizeDate(closeDate);
+
+        trades.push({
+          date,
+          return_pct: returnPct,
+          trade_result: returnPct,
+          trade_direction: deriveDirection(date, index),
+          source: "historical",
+        });
+      } catch {
+        return;
+      }
     });
+
+    return trades.sort(
+      (left, right) =>
+        new Date(left.date).getTime() - new Date(right.date).getTime()
+    );
   } catch (error) {
-    console.error("TRACK RECORD CSV ERROR:", error);
+    console.error("TRACK RECORD CSV ERROR:", {
+      path: historicalPath,
+      error,
+    });
     return [];
   }
 }
 
 export async function loadAppendedTrackRecordTrades(): Promise<StoredTrade[]> {
+  const appendedPath = await resolveExistingPath(APPENDED_DATASET_RELATIVE_PATHS);
+
+  if (!appendedPath) {
+    return [];
+  }
+
   try {
-    const raw = await fs.readFile(APPENDED_DATASET_PATH, "utf8");
+    const raw = await fs.readFile(appendedPath, "utf8");
     const parsed = JSON.parse(raw);
 
     if (!Array.isArray(parsed)) return [];
@@ -123,7 +259,10 @@ export async function loadAppendedTrackRecordTrades(): Promise<StoredTrade[]> {
       return [];
     }
 
-    console.error("APPENDED TRACK RECORD ERROR:", error);
+    console.error("APPENDED TRACK RECORD ERROR:", {
+      path: appendedPath,
+      error,
+    });
     return [];
   }
 }
@@ -194,11 +333,18 @@ export async function appendTrackRecordTrades(
       new Date(left.date).getTime() - new Date(right.date).getTime()
   );
 
-  await fs.writeFile(
-    APPENDED_DATASET_PATH,
-    JSON.stringify(deduped, null, 2),
-    "utf8"
-  );
+  const payload = JSON.stringify(deduped, null, 2);
+  const primaryAppendedPath = await resolveWritablePath(APPENDED_DATASET_RELATIVE_PATHS);
+
+  await fs.mkdir(path.dirname(primaryAppendedPath), { recursive: true });
+  await fs.writeFile(primaryAppendedPath, payload, "utf8");
+
+  const publicFallbackPath = buildCandidatePaths([path.join("public", "track-record", "trades_appended_api.json")])
+    .find((candidate) => candidate !== primaryAppendedPath);
+
+  if (publicFallbackPath && await fileExists(path.dirname(publicFallbackPath))) {
+    await fs.writeFile(publicFallbackPath, payload, "utf8");
+  }
 
   return [...historical, ...deduped].sort(
     (left, right) =>
