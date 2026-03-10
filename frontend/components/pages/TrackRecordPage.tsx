@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import comparisonTimeseries from "@/data/track-record-comparison-timeseries.json";
 import { useDashboardStateStore } from "@/components/DashboardStateProvider";
 import DonutChart from "@/components/track-record/DonutChart";
 import KpiCard from "@/components/track-record/KpiCard";
@@ -18,14 +19,16 @@ import {
   TRACK_RECORD_COMPARISON_ASSETS,
 } from "@/components/track-record/metrics";
 import { getTrackRecordThemePalette } from "@/components/track-record/theme";
-import { GlobeApi } from "@/lib/api";
 
 type Props = {
   initialModel: TrackRecordModel;
 };
 
-const COMPARISON_CACHE_KEY = "track-record:comparisons:v2";
-const COMPARISON_SOURCE = "yahoo";
+const COMPARISON_CACHE_KEY = "track-record:comparisons:v3";
+
+function comparisonPayloadForAsset(assetId: ComparisonAssetId) {
+  return comparisonTimeseries[assetId] ?? null;
+}
 
 function formatPercent(value: number): string {
   return `${(value * 100).toFixed(2)}%`;
@@ -107,16 +110,13 @@ export default function TrackRecordPage({ initialModel }: Props) {
 
     const loadComparisons = async () => {
       if (comparisonSeries.length > 0) return;
-      const results = await Promise.all(
-        TRACK_RECORD_COMPARISON_ASSETS.map(async (asset) => {
-          try {
-            const response = await GlobeApi.getTimeseries(asset.id, "D", COMPARISON_SOURCE, "regular");
-            return buildComparisonSeriesFromCloses(model.chartData, response.ohlcv, asset.id);
-          } catch {
-            return null;
-          }
-        }),
-      );
+      const results = TRACK_RECORD_COMPARISON_ASSETS.map((asset) => {
+        const payload = comparisonPayloadForAsset(asset.id);
+        if (!payload?.ohlcv?.length) {
+          return null;
+        }
+        return buildComparisonSeriesFromCloses(model.chartData, payload.ohlcv, asset.id);
+      });
 
       if (cancelled) return;
       const next = results.filter((item): item is ComparisonSeries => item != null);
@@ -143,18 +143,14 @@ export default function TrackRecordPage({ initialModel }: Props) {
   const handleRefreshComparisons = async () => {
     setIsRefreshingComparisons(true);
     dashboardStore.clearDataCache(COMPARISON_CACHE_KEY);
-    GlobeApi.clearCache((key) => key.includes("/timeseries") && (key.includes("sp500") || key.includes("dax40")));
     try {
-      const results = await Promise.all(
-        TRACK_RECORD_COMPARISON_ASSETS.map(async (asset) => {
-          try {
-            const response = await GlobeApi.getTimeseries(asset.id, "D", COMPARISON_SOURCE, "regular", Math.floor(Date.now() / 60_000));
-            return buildComparisonSeriesFromCloses(model.chartData, response.ohlcv, asset.id);
-          } catch {
-            return null;
-          }
-        }),
-      );
+      const results = TRACK_RECORD_COMPARISON_ASSETS.map((asset) => {
+        const payload = comparisonPayloadForAsset(asset.id);
+        if (!payload?.ohlcv?.length) {
+          return null;
+        }
+        return buildComparisonSeriesFromCloses(model.chartData, payload.ohlcv, asset.id);
+      });
       const next = results.filter((item): item is ComparisonSeries => item != null);
       setComparisonSeries(next);
       dashboardStore.setDataCache(COMPARISON_CACHE_KEY, next);
