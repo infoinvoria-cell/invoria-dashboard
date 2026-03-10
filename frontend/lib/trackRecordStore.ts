@@ -13,10 +13,13 @@ const HISTORICAL_DATASET_PATH = path.join(
 
 const APPENDED_DATASET_PATH = path.join(
   process.cwd(),
+  "frontend",
   "data",
   "track-record",
-  "trades_appended_api.json",
+  "trades_appended_api.json"
 );
+
+console.log("TRACK RECORD PATH:", HISTORICAL_DATASET_PATH);
 
 type StoredTrade = {
   date: string;
