@@ -26,7 +26,7 @@ type OverlayOption = {
   description: string;
 };
 
-const CATEGORY_ORDER = ["Cross Pairs", "FX", "Metals", "Equities", "Crypto", "Energy", "Agriculture", "Softs", "Livestock", "Stocks"];
+const CATEGORY_ORDER = ["Cross Pairs", "FX", "Major FX", "Metals", "Equities", "Crypto", "Energy", "Agriculture", "Softs", "Livestock", "Commodities", "Bonds", "Stocks"];
 
 function TinyToggle({
   checked,
@@ -158,37 +158,38 @@ export function SettingsPanel({
     return map;
   }, [assets]);
 
+  const orderedCategories = useMemo(() => {
+    const known = CATEGORY_ORDER.filter((category) => (groupedFull.get(category) ?? []).length > 0);
+    const unknown = Array.from(groupedFull.keys())
+      .filter((category) => !CATEGORY_ORDER.includes(category) && (groupedFull.get(category) ?? []).length > 0)
+      .sort((left, right) => left.localeCompare(right));
+    return [...known, ...unknown];
+  }, [groupedFull]);
+
   const grouped = useMemo(() => {
     const term = search.trim().toLowerCase();
-    if (!term) {
-      const map = new Map<string, AssetItem[]>();
-      CATEGORY_ORDER.forEach((cat) => {
-        const base = groupedFull.get(cat) ?? [];
-        map.set(cat, base.filter((asset) => asset.watchlistFeatured !== false));
-      });
-      return map;
-    }
     const map = new Map<string, AssetItem[]>();
-    CATEGORY_ORDER.forEach((cat) => {
+    orderedCategories.forEach((cat) => {
       const base = groupedFull.get(cat) ?? [];
-      map.set(
-        cat,
-        base.filter((asset) => {
-          const haystack = [
-            asset.name,
-            asset.symbol,
-            asset.tvSource,
-            asset.country,
-            asset.id,
-          ]
-            .join(" ")
-            .toLowerCase();
-          return haystack.includes(term);
-        }),
-      );
+      if (!term) {
+        map.set(cat, base);
+        return;
+      }
+      map.set(cat, base.filter((asset) => {
+        const haystack = [
+          asset.name,
+          asset.symbol,
+          asset.tvSource,
+          asset.country,
+          asset.id,
+        ]
+          .join(" ")
+          .toLowerCase();
+        return haystack.includes(term);
+      }));
     });
     return map;
-  }, [groupedFull, search]);
+  }, [groupedFull, orderedCategories, search]);
 
   const accentBorder = goldThemeEnabled ? "border-[#d6b24a]/72" : "border-[#2962ff]/72";
   const accentHoverBorder = goldThemeEnabled ? "hover:border-[#d6b24a]/50" : "hover:border-[#2962ff]/45";
@@ -412,7 +413,7 @@ export function SettingsPanel({
       </div>
 
       <div className="scroll-thin min-h-0 flex-1 overflow-y-auto pr-0.5">
-        {CATEGORY_ORDER.map((category) => {
+        {orderedCategories.map((category) => {
           const list = grouped.get(category) ?? [];
           if (!list.length) return null;
           const totalCount = (groupedFull.get(category) ?? []).length;

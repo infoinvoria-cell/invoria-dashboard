@@ -517,8 +517,8 @@ export default function PerformanceChart({
           <div className="h-full rounded-[20px] border" style={{ borderColor: palette.panelBorder, background: "rgba(7,10,15,0.72)" }} />
         )}
 
-        <div className="pointer-events-none absolute right-4 top-[68%] z-[2] -translate-y-1/2 min-[769px]:right-5 min-[769px]:top-[70%]">
-          <img src={palette.watermarkLogo} alt="" className="h-10 w-auto opacity-42 min-[769px]:h-14" />
+        <div className="pointer-events-none absolute bottom-11 right-4 z-[2] min-[769px]:bottom-12 min-[769px]:right-5">
+          <img src={palette.watermarkLogo} alt="" className="h-8 w-auto opacity-38 min-[769px]:h-11" />
         </div>
       </div>
     </section>

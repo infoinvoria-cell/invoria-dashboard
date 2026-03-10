@@ -182,12 +182,12 @@ export default function SeasonalityPage() {
   return (
     <main className="ivq-terminal-page xl:min-h-[calc(100dvh-50px)]">
       <div className="grid h-full min-h-0 gap-4 xl:grid-cols-[220px_minmax(0,1fr)_336px]">
-        <aside className="glass-panel flex min-h-0 flex-col gap-3 !p-3">
+        <aside className="glass-panel flex min-h-0 max-h-[42dvh] flex-col gap-3 self-start !p-3 xl:max-h-[calc(100dvh-124px)]">
           <div className="ivq-input-wrap">
             <Search size={14} strokeWidth={1.8} />
             <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Asset suchen" className="ivq-input" />
           </div>
-          <div className="min-h-0 flex-1 space-y-1 overflow-auto pr-1">
+          <div className="scroll-thin min-h-0 flex-1 space-y-1 overflow-y-auto pr-1">
             {filteredAssets.map((asset) => (
               <button
                 key={asset.id}

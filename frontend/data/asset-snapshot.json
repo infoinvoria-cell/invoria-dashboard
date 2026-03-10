@@ -1,187 +1,999 @@
 {
-  "updatedAt": "2026-03-10T10:27:23+00:00",
-  "count": 185,
+  "updatedAt": "2026-03-10T10:48:44+00:00",
+  "count": 225,
   "items": [
     {
-      "id": "usd",
-      "name": "USD",
-      "category": "Major FX",
-      "iconKey": "",
-      "tvSource": "DX-Y.NYB",
-      "symbol": "DX-Y.NYB",
-      "lat": 38.0,
-      "lng": -97.0,
-      "country": "United States",
-      "color": "#6df8d8",
+      "id": "cross_audcad",
+      "name": "AUD/CAD",
+      "category": "Cross Pairs",
+      "iconKey": "aud",
+      "tvSource": "AUDCAD",
+      "symbol": "AUDCAD",
+      "lat": -33.8688,
+      "lng": 151.2093,
+      "country": "AUD (Australia)",
+      "color": "#7ec7ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": true,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "AUD (Australia)",
+          "lat": -33.8688,
+          "lng": 151.2093,
+          "weight": 1.0
+        },
+        {
+          "label": "CAD (Canada)",
+          "lat": 43.6532,
+          "lng": -79.3832,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "cross_audchf",
+      "name": "AUD/CHF",
+      "category": "Cross Pairs",
+      "iconKey": "aud",
+      "tvSource": "AUDCHF",
+      "symbol": "AUDCHF",
+      "lat": -33.8688,
+      "lng": 151.2093,
+      "country": "AUD (Australia)",
+      "color": "#7ec7ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": true,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "AUD (Australia)",
+          "lat": -33.8688,
+          "lng": 151.2093,
+          "weight": 1.0
+        },
+        {
+          "label": "CHF (Switzerland)",
+          "lat": 47.3769,
+          "lng": 8.5417,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "cross_audjpy",
+      "name": "AUD/JPY",
+      "category": "Cross Pairs",
+      "iconKey": "aud",
+      "tvSource": "AUDJPY",
+      "symbol": "AUDJPY",
+      "lat": -33.8688,
+      "lng": 151.2093,
+      "country": "AUD (Australia)",
+      "color": "#7ec7ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": true,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "AUD (Australia)",
+          "lat": -33.8688,
+          "lng": 151.2093,
+          "weight": 1.0
+        },
+        {
+          "label": "JPY (Japan)",
+          "lat": 35.6762,
+          "lng": 139.6503,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "cross_audnzd",
+      "name": "AUD/NZD",
+      "category": "Cross Pairs",
+      "iconKey": "aud",
+      "tvSource": "AUDNZD",
+      "symbol": "AUDNZD",
+      "lat": -33.8688,
+      "lng": 151.2093,
+      "country": "AUD (Australia)",
+      "color": "#7ec7ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": true,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "AUD (Australia)",
+          "lat": -33.8688,
+          "lng": 151.2093,
+          "weight": 1.0
+        },
+        {
+          "label": "NZD (New Zealand)",
+          "lat": -36.8509,
+          "lng": 174.7645,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "cross_audusd",
+      "name": "AUD/USD",
+      "category": "Cross Pairs",
+      "iconKey": "aud",
+      "tvSource": "AUDUSD",
+      "symbol": "AUDUSD",
+      "lat": -33.8688,
+      "lng": 151.2093,
+      "country": "AUD (Australia)",
+      "color": "#7ec7ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": true,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "AUD (Australia)",
+          "lat": -33.8688,
+          "lng": 151.2093,
+          "weight": 1.0
+        },
+        {
+          "label": "USD (United States)",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "cross_cadchf",
+      "name": "CAD/CHF",
+      "category": "Cross Pairs",
+      "iconKey": "cad",
+      "tvSource": "CADCHF",
+      "symbol": "CADCHF",
+      "lat": 43.6532,
+      "lng": -79.3832,
+      "country": "CAD (Canada)",
+      "color": "#7ec7ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": true,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "CAD (Canada)",
+          "lat": 43.6532,
+          "lng": -79.3832,
+          "weight": 1.0
+        },
+        {
+          "label": "CHF (Switzerland)",
+          "lat": 47.3769,
+          "lng": 8.5417,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "cross_cadjpy",
+      "name": "CAD/JPY",
+      "category": "Cross Pairs",
+      "iconKey": "cad",
+      "tvSource": "CADJPY",
+      "symbol": "CADJPY",
+      "lat": 43.6532,
+      "lng": -79.3832,
+      "country": "CAD (Canada)",
+      "color": "#7ec7ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": true,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "CAD (Canada)",
+          "lat": 43.6532,
+          "lng": -79.3832,
+          "weight": 1.0
+        },
+        {
+          "label": "JPY (Japan)",
+          "lat": 35.6762,
+          "lng": 139.6503,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "cross_chfjpy",
+      "name": "CHF/JPY",
+      "category": "Cross Pairs",
+      "iconKey": "chf",
+      "tvSource": "CHFJPY",
+      "symbol": "CHFJPY",
+      "lat": 47.3769,
+      "lng": 8.5417,
+      "country": "CHF (Switzerland)",
+      "color": "#7ec7ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": true,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "CHF (Switzerland)",
+          "lat": 47.3769,
+          "lng": 8.5417,
+          "weight": 1.0
+        },
+        {
+          "label": "JPY (Japan)",
+          "lat": 35.6762,
+          "lng": 139.6503,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "cross_euraud",
+      "name": "EUR/AUD",
+      "category": "Cross Pairs",
+      "iconKey": "eur",
+      "tvSource": "EURAUD",
+      "symbol": "EURAUD",
+      "lat": 50.1109,
+      "lng": 8.6821,
+      "country": "EUR (Europe)",
+      "color": "#7ec7ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": true,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "EUR (Europe)",
+          "lat": 50.1109,
+          "lng": 8.6821,
+          "weight": 1.0
+        },
+        {
+          "label": "AUD (Australia)",
+          "lat": -33.8688,
+          "lng": 151.2093,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "cross_eurcad",
+      "name": "EUR/CAD",
+      "category": "Cross Pairs",
+      "iconKey": "eur",
+      "tvSource": "EURCAD",
+      "symbol": "EURCAD",
+      "lat": 50.1109,
+      "lng": 8.6821,
+      "country": "EUR (Europe)",
+      "color": "#7ec7ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": true,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "EUR (Europe)",
+          "lat": 50.1109,
+          "lng": 8.6821,
+          "weight": 1.0
+        },
+        {
+          "label": "CAD (Canada)",
+          "lat": 43.6532,
+          "lng": -79.3832,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "cross_eurchf",
+      "name": "EUR/CHF",
+      "category": "Cross Pairs",
+      "iconKey": "eur",
+      "tvSource": "EURCHF",
+      "symbol": "EURCHF",
+      "lat": 50.1109,
+      "lng": 8.6821,
+      "country": "EUR (Europe)",
+      "color": "#7ec7ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": true,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "EUR (Europe)",
+          "lat": 50.1109,
+          "lng": 8.6821,
+          "weight": 1.0
+        },
+        {
+          "label": "CHF (Switzerland)",
+          "lat": 47.3769,
+          "lng": 8.5417,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "cross_eurgbp",
+      "name": "EUR/GBP",
+      "category": "Cross Pairs",
+      "iconKey": "eur",
+      "tvSource": "EURGBP",
+      "symbol": "EURGBP",
+      "lat": 50.1109,
+      "lng": 8.6821,
+      "country": "EUR (Europe)",
+      "color": "#7ec7ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": true,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "EUR (Europe)",
+          "lat": 50.1109,
+          "lng": 8.6821,
+          "weight": 1.0
+        },
+        {
+          "label": "GBP (United Kingdom)",
+          "lat": 51.5074,
+          "lng": -0.1278,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "cross_eurjpy",
+      "name": "EUR/JPY",
+      "category": "Cross Pairs",
+      "iconKey": "eur",
+      "tvSource": "EURJPY",
+      "symbol": "EURJPY",
+      "lat": 50.1109,
+      "lng": 8.6821,
+      "country": "EUR (Europe)",
+      "color": "#7ec7ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": true,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "EUR (Europe)",
+          "lat": 50.1109,
+          "lng": 8.6821,
+          "weight": 1.0
+        },
+        {
+          "label": "JPY (Japan)",
+          "lat": 35.6762,
+          "lng": 139.6503,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "cross_eurnzd",
+      "name": "EUR/NZD",
+      "category": "Cross Pairs",
+      "iconKey": "eur",
+      "tvSource": "EURNZD",
+      "symbol": "EURNZD",
+      "lat": 50.1109,
+      "lng": 8.6821,
+      "country": "EUR (Europe)",
+      "color": "#7ec7ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": true,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "EUR (Europe)",
+          "lat": 50.1109,
+          "lng": 8.6821,
+          "weight": 1.0
+        },
+        {
+          "label": "NZD (New Zealand)",
+          "lat": -36.8509,
+          "lng": 174.7645,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "cross_eurusd",
+      "name": "EUR/USD",
+      "category": "Cross Pairs",
+      "iconKey": "eur",
+      "tvSource": "EURUSD",
+      "symbol": "EURUSD",
+      "lat": 50.1109,
+      "lng": 8.6821,
+      "country": "EUR (Europe)",
+      "color": "#7ec7ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": true,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "EUR (Europe)",
+          "lat": 50.1109,
+          "lng": 8.6821,
+          "weight": 1.0
+        },
+        {
+          "label": "USD (United States)",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "cross_gbpaud",
+      "name": "GBP/AUD",
+      "category": "Cross Pairs",
+      "iconKey": "gbp",
+      "tvSource": "GBPAUD",
+      "symbol": "GBPAUD",
+      "lat": 51.5074,
+      "lng": -0.1278,
+      "country": "GBP (United Kingdom)",
+      "color": "#7ec7ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": true,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "GBP (United Kingdom)",
+          "lat": 51.5074,
+          "lng": -0.1278,
+          "weight": 1.0
+        },
+        {
+          "label": "AUD (Australia)",
+          "lat": -33.8688,
+          "lng": 151.2093,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "cross_gbpcad",
+      "name": "GBP/CAD",
+      "category": "Cross Pairs",
+      "iconKey": "gbp",
+      "tvSource": "GBPCAD",
+      "symbol": "GBPCAD",
+      "lat": 51.5074,
+      "lng": -0.1278,
+      "country": "GBP (United Kingdom)",
+      "color": "#7ec7ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": true,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "GBP (United Kingdom)",
+          "lat": 51.5074,
+          "lng": -0.1278,
+          "weight": 1.0
+        },
+        {
+          "label": "CAD (Canada)",
+          "lat": 43.6532,
+          "lng": -79.3832,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "cross_gbpchf",
+      "name": "GBP/CHF",
+      "category": "Cross Pairs",
+      "iconKey": "gbp",
+      "tvSource": "GBPCHF",
+      "symbol": "GBPCHF",
+      "lat": 51.5074,
+      "lng": -0.1278,
+      "country": "GBP (United Kingdom)",
+      "color": "#7ec7ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": true,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "GBP (United Kingdom)",
+          "lat": 51.5074,
+          "lng": -0.1278,
+          "weight": 1.0
+        },
+        {
+          "label": "CHF (Switzerland)",
+          "lat": 47.3769,
+          "lng": 8.5417,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "cross_gbpjpy",
+      "name": "GBP/JPY",
+      "category": "Cross Pairs",
+      "iconKey": "gbp",
+      "tvSource": "GBPJPY",
+      "symbol": "GBPJPY",
+      "lat": 51.5074,
+      "lng": -0.1278,
+      "country": "GBP (United Kingdom)",
+      "color": "#7ec7ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": true,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "GBP (United Kingdom)",
+          "lat": 51.5074,
+          "lng": -0.1278,
+          "weight": 1.0
+        },
+        {
+          "label": "JPY (Japan)",
+          "lat": 35.6762,
+          "lng": 139.6503,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "cross_gbpnzd",
+      "name": "GBP/NZD",
+      "category": "Cross Pairs",
+      "iconKey": "gbp",
+      "tvSource": "GBPNZD",
+      "symbol": "GBPNZD",
+      "lat": 51.5074,
+      "lng": -0.1278,
+      "country": "GBP (United Kingdom)",
+      "color": "#7ec7ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": true,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "GBP (United Kingdom)",
+          "lat": 51.5074,
+          "lng": -0.1278,
+          "weight": 1.0
+        },
+        {
+          "label": "NZD (New Zealand)",
+          "lat": -36.8509,
+          "lng": 174.7645,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "cross_gbpusd",
+      "name": "GBP/USD",
+      "category": "Cross Pairs",
+      "iconKey": "gbp",
+      "tvSource": "GBPUSD",
+      "symbol": "GBPUSD",
+      "lat": 51.5074,
+      "lng": -0.1278,
+      "country": "GBP (United Kingdom)",
+      "color": "#7ec7ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": true,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "GBP (United Kingdom)",
+          "lat": 51.5074,
+          "lng": -0.1278,
+          "weight": 1.0
+        },
+        {
+          "label": "USD (United States)",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "cross_nzdcad",
+      "name": "NZD/CAD",
+      "category": "Cross Pairs",
+      "iconKey": "nzd",
+      "tvSource": "NZDCAD",
+      "symbol": "NZDCAD",
+      "lat": -36.8509,
+      "lng": 174.7645,
+      "country": "NZD (New Zealand)",
+      "color": "#7ec7ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": true,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "NZD (New Zealand)",
+          "lat": -36.8509,
+          "lng": 174.7645,
+          "weight": 1.0
+        },
+        {
+          "label": "CAD (Canada)",
+          "lat": 43.6532,
+          "lng": -79.3832,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "cross_nzdchf",
+      "name": "NZD/CHF",
+      "category": "Cross Pairs",
+      "iconKey": "nzd",
+      "tvSource": "NZDCHF",
+      "symbol": "NZDCHF",
+      "lat": -36.8509,
+      "lng": 174.7645,
+      "country": "NZD (New Zealand)",
+      "color": "#7ec7ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": true,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "NZD (New Zealand)",
+          "lat": -36.8509,
+          "lng": 174.7645,
+          "weight": 1.0
+        },
+        {
+          "label": "CHF (Switzerland)",
+          "lat": 47.3769,
+          "lng": 8.5417,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "cross_nzdjpy",
+      "name": "NZD/JPY",
+      "category": "Cross Pairs",
+      "iconKey": "nzd",
+      "tvSource": "NZDJPY",
+      "symbol": "NZDJPY",
+      "lat": -36.8509,
+      "lng": 174.7645,
+      "country": "NZD (New Zealand)",
+      "color": "#7ec7ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": true,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "NZD (New Zealand)",
+          "lat": -36.8509,
+          "lng": 174.7645,
+          "weight": 1.0
+        },
+        {
+          "label": "JPY (Japan)",
+          "lat": 35.6762,
+          "lng": 139.6503,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "cross_nzdusd",
+      "name": "NZD/USD",
+      "category": "Cross Pairs",
+      "iconKey": "nzd",
+      "tvSource": "NZDUSD",
+      "symbol": "NZDUSD",
+      "lat": -36.8509,
+      "lng": 174.7645,
+      "country": "NZD (New Zealand)",
+      "color": "#7ec7ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": true,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "NZD (New Zealand)",
+          "lat": -36.8509,
+          "lng": 174.7645,
+          "weight": 1.0
+        },
+        {
+          "label": "USD (United States)",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "cross_usdcad",
+      "name": "USD/CAD",
+      "category": "Cross Pairs",
+      "iconKey": "usd",
+      "tvSource": "USDCAD",
+      "symbol": "USDCAD",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "USD (United States)",
+      "color": "#7ec7ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": true,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "USD (United States)",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        },
+        {
+          "label": "CAD (Canada)",
+          "lat": 43.6532,
+          "lng": -79.3832,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "cross_usdchf",
+      "name": "USD/CHF",
+      "category": "Cross Pairs",
+      "iconKey": "usd",
+      "tvSource": "USDCHF",
+      "symbol": "USDCHF",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "USD (United States)",
+      "color": "#7ec7ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": true,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "USD (United States)",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        },
+        {
+          "label": "CHF (Switzerland)",
+          "lat": 47.3769,
+          "lng": 8.5417,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "cross_usdjpy",
+      "name": "USD/JPY",
+      "category": "Cross Pairs",
+      "iconKey": "usd",
+      "tvSource": "USDJPY",
+      "symbol": "USDJPY",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "USD (United States)",
+      "color": "#7ec7ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": true,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "USD (United States)",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        },
+        {
+          "label": "JPY (Japan)",
+          "lat": 35.6762,
+          "lng": 139.6503,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "usd_index",
+      "name": "US Dollar Index",
+      "category": "FX",
+      "iconKey": "usd",
+      "tvSource": "DXY",
+      "symbol": "DXY",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "New York",
+      "color": "#2962ff",
       "defaultEnabled": true,
       "watchlistFeatured": true,
       "showOnGlobe": true,
       "locations": [
         {
-          "label": "United States",
-          "lat": 38.0,
-          "lng": -97.0,
+          "label": "New York",
+          "lat": 40.7128,
+          "lng": -74.006,
           "weight": 1.0
         }
       ]
     },
     {
       "id": "eur",
-      "name": "EUR",
-      "category": "Major FX",
-      "iconKey": "",
-      "tvSource": "EURUSD",
-      "symbol": "EURUSD",
-      "lat": 50.5,
-      "lng": 10.0,
-      "country": "Germany / EU",
-      "color": "#62a8ff",
+      "name": "Euro",
+      "category": "FX",
+      "iconKey": "eur",
+      "tvSource": "6E1!",
+      "symbol": "6E1!",
+      "lat": 48.8566,
+      "lng": 2.3522,
+      "country": "Paris",
+      "color": "#2962ff",
       "defaultEnabled": true,
       "watchlistFeatured": true,
       "showOnGlobe": true,
       "locations": [
         {
-          "label": "Germany / EU",
-          "lat": 50.5,
-          "lng": 10.0,
+          "label": "Paris",
+          "lat": 48.8566,
+          "lng": 2.3522,
           "weight": 1.0
         }
       ]
     },
     {
       "id": "jpy",
-      "name": "JPY",
-      "category": "Major FX",
-      "iconKey": "",
-      "tvSource": "USDJPY",
-      "symbol": "USDJPY",
-      "lat": 35.7,
-      "lng": 139.7,
-      "country": "Japan",
-      "color": "#8ee95f",
+      "name": "Japanese Yen",
+      "category": "FX",
+      "iconKey": "jpy",
+      "tvSource": "6J1!",
+      "symbol": "6J1!",
+      "lat": 35.6762,
+      "lng": 139.6503,
+      "country": "Tokyo",
+      "color": "#2962ff",
       "defaultEnabled": true,
       "watchlistFeatured": true,
       "showOnGlobe": true,
       "locations": [
         {
-          "label": "Japan",
-          "lat": 35.7,
-          "lng": 139.7,
+          "label": "Tokyo",
+          "lat": 35.6762,
+          "lng": 139.6503,
           "weight": 1.0
         }
       ]
     },
     {
       "id": "gbp",
-      "name": "GBP",
-      "category": "Major FX",
-      "iconKey": "",
-      "tvSource": "GBPUSD",
-      "symbol": "GBPUSD",
-      "lat": 51.5,
-      "lng": -0.1,
-      "country": "United Kingdom",
-      "color": "#f6b93b",
+      "name": "British Pound",
+      "category": "FX",
+      "iconKey": "gbp",
+      "tvSource": "6B1!",
+      "symbol": "6B1!",
+      "lat": 51.4,
+      "lng": -0.2,
+      "country": "London",
+      "color": "#2962ff",
       "defaultEnabled": true,
       "watchlistFeatured": true,
       "showOnGlobe": true,
       "locations": [
         {
-          "label": "United Kingdom",
-          "lat": 51.5,
-          "lng": -0.1,
+          "label": "London",
+          "lat": 51.4,
+          "lng": -0.2,
           "weight": 1.0
         }
       ]
     },
     {
       "id": "chf",
-      "name": "CHF",
-      "category": "Major FX",
-      "iconKey": "",
-      "tvSource": "USDCHF",
-      "symbol": "USDCHF",
-      "lat": 47.4,
-      "lng": 8.5,
-      "country": "Switzerland",
-      "color": "#d6f06a",
+      "name": "Swiss Franc",
+      "category": "FX",
+      "iconKey": "chf",
+      "tvSource": "6S1!",
+      "symbol": "6S1!",
+      "lat": 47.3769,
+      "lng": 8.5417,
+      "country": "Zurich",
+      "color": "#2962ff",
       "defaultEnabled": true,
       "watchlistFeatured": true,
       "showOnGlobe": true,
       "locations": [
         {
-          "label": "Switzerland",
-          "lat": 47.4,
-          "lng": 8.5,
+          "label": "Zurich",
+          "lat": 47.3769,
+          "lng": 8.5417,
           "weight": 1.0
         }
       ]
     },
     {
       "id": "aud",
-      "name": "AUD",
-      "category": "Major FX",
-      "iconKey": "",
-      "tvSource": "AUDUSD",
-      "symbol": "AUDUSD",
-      "lat": -33.9,
-      "lng": 151.2,
-      "country": "Australia",
-      "color": "#ff9f43",
+      "name": "Australian Dollar",
+      "category": "FX",
+      "iconKey": "aud",
+      "tvSource": "6A1!",
+      "symbol": "6A1!",
+      "lat": -33.8688,
+      "lng": 151.2093,
+      "country": "Sydney",
+      "color": "#2962ff",
       "defaultEnabled": true,
       "watchlistFeatured": true,
       "showOnGlobe": true,
       "locations": [
         {
-          "label": "Australia",
-          "lat": -33.9,
-          "lng": 151.2,
+          "label": "Sydney",
+          "lat": -33.8688,
+          "lng": 151.2093,
           "weight": 1.0
         }
       ]
     },
     {
       "id": "cad",
-      "name": "CAD",
-      "category": "Major FX",
-      "iconKey": "",
-      "tvSource": "USDCAD",
-      "symbol": "USDCAD",
-      "lat": 56.1,
-      "lng": -106.3,
-      "country": "Canada",
-      "color": "#42d9ff",
+      "name": "Canadian Dollar",
+      "category": "FX",
+      "iconKey": "cad",
+      "tvSource": "6C1!",
+      "symbol": "6C1!",
+      "lat": 43.6532,
+      "lng": -79.3832,
+      "country": "Toronto",
+      "color": "#2962ff",
       "defaultEnabled": true,
       "watchlistFeatured": true,
       "showOnGlobe": true,
       "locations": [
         {
-          "label": "Canada",
-          "lat": 56.1,
-          "lng": -106.3,
+          "label": "Toronto",
+          "lat": 43.6532,
+          "lng": -79.3832,
           "weight": 1.0
         }
       ]
     },
     {
       "id": "nzd",
-      "name": "NZD",
-      "category": "Major FX",
-      "iconKey": "",
-      "tvSource": "NZDUSD",
-      "symbol": "NZDUSD",
-      "lat": -41.3,
-      "lng": 174.8,
-      "country": "New Zealand",
-      "color": "#7ef5a7",
+      "name": "New Zealand Dollar",
+      "category": "FX",
+      "iconKey": "nzd",
+      "tvSource": "6N1!",
+      "symbol": "6N1!",
+      "lat": -36.8509,
+      "lng": 174.7645,
+      "country": "Auckland",
+      "color": "#2962ff",
       "defaultEnabled": true,
       "watchlistFeatured": true,
       "showOnGlobe": true,
       "locations": [
         {
-          "label": "New Zealand",
-          "lat": -41.3,
-          "lng": 174.8,
+          "label": "Auckland",
+          "lat": -36.8509,
+          "lng": 174.7645,
           "weight": 1.0
         }
       ]
@@ -190,21 +1002,21 @@
       "id": "gold",
       "name": "Gold",
       "category": "Metals",
-      "iconKey": "",
-      "tvSource": "XAUUSD",
-      "symbol": "XAUUSD",
-      "lat": 40.7,
-      "lng": -74.0,
-      "country": "United States",
-      "color": "#ffd166",
+      "iconKey": "gold",
+      "tvSource": "GC1!",
+      "symbol": "GC1!",
+      "lat": 36.0611,
+      "lng": 103.8343,
+      "country": "West China",
+      "color": "#ffeb3b",
       "defaultEnabled": true,
       "watchlistFeatured": true,
       "showOnGlobe": true,
       "locations": [
         {
-          "label": "United States",
-          "lat": 40.7,
-          "lng": -74.0,
+          "label": "West China",
+          "lat": 36.0611,
+          "lng": 103.8343,
           "weight": 1.0
         }
       ]
@@ -213,21 +1025,320 @@
       "id": "silver",
       "name": "Silver",
       "category": "Metals",
-      "iconKey": "",
-      "tvSource": "XAGUSD",
-      "symbol": "XAGUSD",
-      "lat": 29.7,
-      "lng": -95.3,
-      "country": "United States",
-      "color": "#d9dde2",
+      "iconKey": "silver",
+      "tvSource": "SI1!",
+      "symbol": "SI1!",
+      "lat": 23.6345,
+      "lng": -102.5528,
+      "country": "Mexico",
+      "color": "#ffeb3b",
       "defaultEnabled": true,
       "watchlistFeatured": true,
       "showOnGlobe": true,
       "locations": [
         {
-          "label": "United States",
-          "lat": 29.7,
-          "lng": -95.3,
+          "label": "Mexico",
+          "lat": 23.6345,
+          "lng": -102.5528,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "copper",
+      "name": "Copper",
+      "category": "Metals",
+      "iconKey": "copper",
+      "tvSource": "HG1!",
+      "symbol": "HG1!",
+      "lat": -35.6751,
+      "lng": -71.543,
+      "country": "Chile",
+      "color": "#ffeb3b",
+      "defaultEnabled": true,
+      "watchlistFeatured": true,
+      "showOnGlobe": true,
+      "locations": [
+        {
+          "label": "Chile",
+          "lat": -35.6751,
+          "lng": -71.543,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "platinum",
+      "name": "Platinum",
+      "category": "Metals",
+      "iconKey": "platinum",
+      "tvSource": "PL1!",
+      "symbol": "PL1!",
+      "lat": -30.5595,
+      "lng": 22.9375,
+      "country": "South Africa",
+      "color": "#ffeb3b",
+      "defaultEnabled": true,
+      "watchlistFeatured": true,
+      "showOnGlobe": true,
+      "locations": [
+        {
+          "label": "South Africa",
+          "lat": -30.5595,
+          "lng": 22.9375,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "palladium",
+      "name": "Palladium",
+      "category": "Metals",
+      "iconKey": "palladium",
+      "tvSource": "PA1!",
+      "symbol": "PA1!",
+      "lat": 61.524,
+      "lng": 105.3188,
+      "country": "Russia",
+      "color": "#ffeb3b",
+      "defaultEnabled": true,
+      "watchlistFeatured": true,
+      "showOnGlobe": true,
+      "locations": [
+        {
+          "label": "Russia",
+          "lat": 61.524,
+          "lng": 105.3188,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "aluminum",
+      "name": "Aluminum",
+      "category": "Metals",
+      "iconKey": "aluminum",
+      "tvSource": "ALI1!",
+      "symbol": "ALI1!",
+      "lat": 23.1291,
+      "lng": 113.2644,
+      "country": "Guangzhou",
+      "color": "#ffeb3b",
+      "defaultEnabled": true,
+      "watchlistFeatured": true,
+      "showOnGlobe": true,
+      "locations": [
+        {
+          "label": "Guangzhou",
+          "lat": 23.1291,
+          "lng": 113.2644,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "sp500",
+      "name": "S&P 500",
+      "category": "Equities",
+      "iconKey": "spx",
+      "tvSource": "ES1!",
+      "symbol": "ES1!",
+      "lat": 40.7306,
+      "lng": -73.9352,
+      "country": "New York",
+      "color": "#84a8ff",
+      "defaultEnabled": true,
+      "watchlistFeatured": true,
+      "showOnGlobe": true,
+      "locations": [
+        {
+          "label": "New York",
+          "lat": 40.7306,
+          "lng": -73.9352,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "nasdaq100",
+      "name": "Nasdaq 100",
+      "category": "Equities",
+      "iconKey": "nasdaq",
+      "tvSource": "NQ1!",
+      "symbol": "NQ1!",
+      "lat": 37.7749,
+      "lng": -122.4194,
+      "country": "San Francisco",
+      "color": "#84a8ff",
+      "defaultEnabled": true,
+      "watchlistFeatured": true,
+      "showOnGlobe": true,
+      "locations": [
+        {
+          "label": "San Francisco",
+          "lat": 37.7749,
+          "lng": -122.4194,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "dowjones",
+      "name": "Dow Jones",
+      "category": "Equities",
+      "iconKey": "dow",
+      "tvSource": "YM1!",
+      "symbol": "YM1!",
+      "lat": 41.8781,
+      "lng": -87.6298,
+      "country": "Chicago",
+      "color": "#84a8ff",
+      "defaultEnabled": true,
+      "watchlistFeatured": true,
+      "showOnGlobe": true,
+      "locations": [
+        {
+          "label": "Chicago",
+          "lat": 41.8781,
+          "lng": -87.6298,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "russell2000",
+      "name": "Russell 2000",
+      "category": "Equities",
+      "iconKey": "russell",
+      "tvSource": "RTY1!",
+      "symbol": "RTY1!",
+      "lat": 39.7392,
+      "lng": -104.9903,
+      "country": "Denver",
+      "color": "#84a8ff",
+      "defaultEnabled": true,
+      "watchlistFeatured": true,
+      "showOnGlobe": true,
+      "locations": [
+        {
+          "label": "Denver",
+          "lat": 39.7392,
+          "lng": -104.9903,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "dax40",
+      "name": "DAX 40",
+      "category": "Equities",
+      "iconKey": "dax",
+      "tvSource": "FDAX1!",
+      "symbol": "FDAX1!",
+      "lat": 52.52,
+      "lng": 13.405,
+      "country": "Berlin",
+      "color": "#84a8ff",
+      "defaultEnabled": true,
+      "watchlistFeatured": true,
+      "showOnGlobe": true,
+      "locations": [
+        {
+          "label": "Berlin",
+          "lat": 52.52,
+          "lng": 13.405,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "bitcoin",
+      "name": "Bitcoin",
+      "category": "Crypto",
+      "iconKey": "btc",
+      "tvSource": "BTCUSD",
+      "symbol": "BTCUSD",
+      "lat": 55.9533,
+      "lng": -3.1883,
+      "country": "Edinburgh",
+      "color": "#f0b35a",
+      "defaultEnabled": true,
+      "watchlistFeatured": true,
+      "showOnGlobe": true,
+      "locations": [
+        {
+          "label": "Edinburgh",
+          "lat": 55.9533,
+          "lng": -3.1883,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "wti_spot",
+      "name": "WTI Crude Oil",
+      "category": "Energy",
+      "iconKey": "oil",
+      "tvSource": "USOIL",
+      "symbol": "USOIL",
+      "lat": 31.0,
+      "lng": -103.0,
+      "country": "Texas",
+      "color": "#ff9800",
+      "defaultEnabled": true,
+      "watchlistFeatured": true,
+      "showOnGlobe": true,
+      "locations": [
+        {
+          "label": "Texas",
+          "lat": 31.0,
+          "lng": -103.0,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "natgas",
+      "name": "Natural Gas",
+      "category": "Energy",
+      "iconKey": "gas",
+      "tvSource": "NG1!",
+      "symbol": "NG1!",
+      "lat": 30.9843,
+      "lng": -91.9623,
+      "country": "Louisiana",
+      "color": "#ff9800",
+      "defaultEnabled": true,
+      "watchlistFeatured": true,
+      "showOnGlobe": true,
+      "locations": [
+        {
+          "label": "Louisiana",
+          "lat": 30.9843,
+          "lng": -91.9623,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "gasoline",
+      "name": "Gasoline (RBOB)",
+      "category": "Energy",
+      "iconKey": "gasoline",
+      "tvSource": "RB1!",
+      "symbol": "RB1!",
+      "lat": 28.5383,
+      "lng": -81.3792,
+      "country": "Florida",
+      "color": "#ff9800",
+      "defaultEnabled": true,
+      "watchlistFeatured": true,
+      "showOnGlobe": true,
+      "locations": [
+        {
+          "label": "Florida",
+          "lat": 28.5383,
+          "lng": -81.3792,
           "weight": 1.0
         }
       ]
@@ -235,68 +1346,97 @@
     {
       "id": "wheat",
       "name": "Wheat",
-      "category": "Commodities",
-      "iconKey": "",
-      "tvSource": "ZW=F",
-      "symbol": "ZW=F",
-      "lat": 49.0,
-      "lng": 31.5,
+      "category": "Agriculture",
+      "iconKey": "wheat",
+      "tvSource": "ZW1!",
+      "symbol": "ZW1!",
+      "lat": 48.3794,
+      "lng": 31.1656,
       "country": "Ukraine",
-      "color": "#f7ca88",
+      "color": "#c8de70",
       "defaultEnabled": true,
       "watchlistFeatured": true,
       "showOnGlobe": true,
       "locations": [
         {
           "label": "Ukraine",
-          "lat": 49.0,
-          "lng": 31.5,
-          "weight": 1.0
+          "lat": 48.3794,
+          "lng": 31.1656,
+          "weight": 0.55
+        },
+        {
+          "label": "USA Midwest",
+          "lat": 39.0119,
+          "lng": -98.4842,
+          "weight": 0.45
         }
       ]
     },
     {
-      "id": "soybean",
-      "name": "Soybean",
-      "category": "Commodities",
-      "iconKey": "",
-      "tvSource": "SOYBEAN",
-      "symbol": "SOYBEAN",
-      "lat": -15.8,
-      "lng": -47.9,
-      "country": "Brazil",
-      "color": "#f4d35e",
+      "id": "corn",
+      "name": "Corn",
+      "category": "Agriculture",
+      "iconKey": "corn",
+      "tvSource": "ZC1!",
+      "symbol": "ZC1!",
+      "lat": 41.878,
+      "lng": -93.0977,
+      "country": "USA Midwest",
+      "color": "#c8de70",
       "defaultEnabled": true,
       "watchlistFeatured": true,
       "showOnGlobe": true,
       "locations": [
         {
-          "label": "Brazil",
-          "lat": -15.8,
-          "lng": -47.9,
+          "label": "USA Midwest",
+          "lat": 41.878,
+          "lng": -93.0977,
           "weight": 1.0
         }
       ]
     },
     {
-      "id": "sugar",
-      "name": "Sugar",
-      "category": "Commodities",
-      "iconKey": "",
-      "tvSource": "SUGAR",
-      "symbol": "SUGAR",
-      "lat": -22.9,
-      "lng": -43.2,
-      "country": "Brazil",
-      "color": "#eccc68",
+      "id": "soybeans",
+      "name": "Soybeans",
+      "category": "Agriculture",
+      "iconKey": "soy",
+      "tvSource": "ZS1!",
+      "symbol": "ZS1!",
+      "lat": -15.6,
+      "lng": -56.1,
+      "country": "Central Brazil",
+      "color": "#c8de70",
       "defaultEnabled": true,
       "watchlistFeatured": true,
       "showOnGlobe": true,
       "locations": [
         {
-          "label": "Brazil",
-          "lat": -22.9,
-          "lng": -43.2,
+          "label": "Central Brazil",
+          "lat": -15.6,
+          "lng": -56.1,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "soyoil",
+      "name": "Soybean Oil",
+      "category": "Agriculture",
+      "iconKey": "soyoil",
+      "tvSource": "ZL1!",
+      "symbol": "ZL1!",
+      "lat": -38.4161,
+      "lng": -63.6167,
+      "country": "Argentina",
+      "color": "#c8de70",
+      "defaultEnabled": true,
+      "watchlistFeatured": true,
+      "showOnGlobe": true,
+      "locations": [
+        {
+          "label": "Argentina",
+          "lat": -38.4161,
+          "lng": -63.6167,
           "weight": 1.0
         }
       ]
@@ -304,22 +1444,45 @@
     {
       "id": "coffee",
       "name": "Coffee",
-      "category": "Commodities",
-      "iconKey": "",
-      "tvSource": "COFFEE",
-      "symbol": "COFFEE",
-      "lat": -22.0,
-      "lng": -43.5,
-      "country": "Brazil",
-      "color": "#c99a6b",
+      "category": "Softs",
+      "iconKey": "coffee",
+      "tvSource": "KC1!",
+      "symbol": "KC1!",
+      "lat": -23.5505,
+      "lng": -46.6333,
+      "country": "Sao Paulo",
+      "color": "#d6b38a",
       "defaultEnabled": true,
       "watchlistFeatured": true,
       "showOnGlobe": true,
       "locations": [
         {
-          "label": "Brazil",
-          "lat": -22.0,
-          "lng": -43.5,
+          "label": "Sao Paulo",
+          "lat": -23.5505,
+          "lng": -46.6333,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "sugar",
+      "name": "Sugar",
+      "category": "Softs",
+      "iconKey": "sugar",
+      "tvSource": "SB1!",
+      "symbol": "SB1!",
+      "lat": -8.0476,
+      "lng": -34.877,
+      "country": "Recife",
+      "color": "#d6b38a",
+      "defaultEnabled": true,
+      "watchlistFeatured": true,
+      "showOnGlobe": true,
+      "locations": [
+        {
+          "label": "Recife",
+          "lat": -8.0476,
+          "lng": -34.877,
           "weight": 1.0
         }
       ]
@@ -327,183 +1490,114 @@
     {
       "id": "cocoa",
       "name": "Cocoa",
-      "category": "Commodities",
-      "iconKey": "",
-      "tvSource": "COCOA",
-      "symbol": "COCOA",
-      "lat": 7.9,
-      "lng": -1.0,
-      "country": "Ghana",
-      "color": "#8d6e63",
+      "category": "Softs",
+      "iconKey": "cocoa",
+      "tvSource": "CC1!",
+      "symbol": "CC1!",
+      "lat": 7.54,
+      "lng": -5.5471,
+      "country": "Cote d'Ivoire",
+      "color": "#d6b38a",
       "defaultEnabled": true,
       "watchlistFeatured": true,
       "showOnGlobe": true,
       "locations": [
         {
-          "label": "Ghana",
-          "lat": 7.9,
-          "lng": -1.0,
+          "label": "Cote d'Ivoire",
+          "lat": 7.54,
+          "lng": -5.5471,
           "weight": 1.0
         }
       ]
     },
     {
-      "id": "corn",
-      "name": "Corn",
-      "category": "Commodities",
-      "iconKey": "",
-      "tvSource": "ZC=F",
-      "symbol": "ZC=F",
-      "lat": 41.9,
-      "lng": -93.6,
-      "country": "United States",
-      "color": "#f6e58d",
+      "id": "cotton",
+      "name": "Cotton",
+      "category": "Softs",
+      "iconKey": "cotton",
+      "tvSource": "CT1!",
+      "symbol": "CT1!",
+      "lat": 20.5937,
+      "lng": 78.9629,
+      "country": "India",
+      "color": "#d6b38a",
       "defaultEnabled": true,
       "watchlistFeatured": true,
       "showOnGlobe": true,
       "locations": [
         {
-          "label": "United States",
-          "lat": 41.9,
-          "lng": -93.6,
+          "label": "India",
+          "lat": 20.5937,
+          "lng": 78.9629,
           "weight": 1.0
         }
       ]
     },
     {
-      "id": "oil",
-      "name": "Oil (WTI)",
-      "category": "Commodities",
-      "iconKey": "",
-      "tvSource": "WTI",
-      "symbol": "WTI",
-      "lat": 24.7,
-      "lng": 46.7,
-      "country": "Saudi Arabia",
-      "color": "#ff6b6b",
+      "id": "orange_juice",
+      "name": "Orange Juice",
+      "category": "Softs",
+      "iconKey": "orange",
+      "tvSource": "OJ1!",
+      "symbol": "OJ1!",
+      "lat": 27.6648,
+      "lng": -81.5158,
+      "country": "Florida",
+      "color": "#d6b38a",
       "defaultEnabled": true,
       "watchlistFeatured": true,
       "showOnGlobe": true,
       "locations": [
         {
-          "label": "Saudi Arabia",
-          "lat": 24.7,
-          "lng": 46.7,
+          "label": "Florida",
+          "lat": 27.6648,
+          "lng": -81.5158,
           "weight": 1.0
         }
       ]
     },
     {
-      "id": "brent",
-      "name": "Oil (Brent)",
-      "category": "Commodities",
-      "iconKey": "",
-      "tvSource": "BRENT",
-      "symbol": "BRENT",
-      "lat": 25.3,
-      "lng": 55.3,
-      "country": "UAE",
-      "color": "#ff8787",
+      "id": "live_cattle",
+      "name": "Live Cattle",
+      "category": "Livestock",
+      "iconKey": "cattle",
+      "tvSource": "LE1!",
+      "symbol": "LE1!",
+      "lat": 38.5,
+      "lng": -98.0,
+      "country": "Kansas",
+      "color": "#bda8ff",
       "defaultEnabled": true,
       "watchlistFeatured": true,
       "showOnGlobe": true,
       "locations": [
         {
-          "label": "UAE",
-          "lat": 25.3,
-          "lng": 55.3,
+          "label": "Kansas",
+          "lat": 38.5,
+          "lng": -98.0,
           "weight": 1.0
         }
       ]
     },
     {
-      "id": "ngas",
-      "name": "Natural Gas",
-      "category": "Commodities",
-      "iconKey": "",
-      "tvSource": "NGAS",
-      "symbol": "NGAS",
-      "lat": 31.2,
-      "lng": 121.5,
-      "country": "China",
-      "color": "#74b9ff",
+      "id": "lean_hogs",
+      "name": "Lean Hogs",
+      "category": "Livestock",
+      "iconKey": "hogs",
+      "tvSource": "HE1!",
+      "symbol": "HE1!",
+      "lat": 42.0,
+      "lng": -93.0,
+      "country": "Iowa",
+      "color": "#bda8ff",
       "defaultEnabled": true,
       "watchlistFeatured": true,
       "showOnGlobe": true,
       "locations": [
         {
-          "label": "China",
-          "lat": 31.2,
-          "lng": 121.5,
-          "weight": 1.0
-        }
-      ]
-    },
-    {
-      "id": "us10y",
-      "name": "US10Y",
-      "category": "Bonds",
-      "iconKey": "",
-      "tvSource": "^TNX",
-      "symbol": "^TNX",
-      "lat": 38.9,
-      "lng": -77.0,
-      "country": "United States",
-      "color": "#9c88ff",
-      "defaultEnabled": false,
-      "watchlistFeatured": true,
-      "showOnGlobe": true,
-      "locations": [
-        {
-          "label": "United States",
-          "lat": 38.9,
-          "lng": -77.0,
-          "weight": 1.0
-        }
-      ]
-    },
-    {
-      "id": "de10y",
-      "name": "DE10Y",
-      "category": "Bonds",
-      "iconKey": "",
-      "tvSource": "DE10YB=RR",
-      "symbol": "DE10YB=RR",
-      "lat": 52.5,
-      "lng": 13.4,
-      "country": "Germany",
-      "color": "#a29bfe",
-      "defaultEnabled": false,
-      "watchlistFeatured": true,
-      "showOnGlobe": true,
-      "locations": [
-        {
-          "label": "Germany",
-          "lat": 52.5,
-          "lng": 13.4,
-          "weight": 1.0
-        }
-      ]
-    },
-    {
-      "id": "uk10y",
-      "name": "UK10Y",
-      "category": "Bonds",
-      "iconKey": "",
-      "tvSource": "GB10YB=RR",
-      "symbol": "GB10YB=RR",
-      "lat": 51.5,
-      "lng": -0.1,
-      "country": "United Kingdom",
-      "color": "#b197fc",
-      "defaultEnabled": false,
-      "watchlistFeatured": true,
-      "showOnGlobe": true,
-      "locations": [
-        {
-          "label": "United Kingdom",
-          "lat": 51.5,
-          "lng": -0.1,
+          "label": "Iowa",
+          "lat": 42.0,
+          "lng": -93.0,
           "weight": 1.0
         }
       ]

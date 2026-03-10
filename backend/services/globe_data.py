@@ -38,7 +38,10 @@ except Exception:  # pragma: no cover
 
 _ROOT = Path(__file__).resolve().parents[2]
 _MOCK_DIR = _ROOT / "backend" / "mock" / "globe"
-_ASSET_CONFIG_PATH = _ROOT / "config" / "asset_config.json"
+_ASSET_CONFIG_CANDIDATES = (
+    _ROOT / "config" / "asset_config.json",
+    _ROOT / "trading_dashboard" / "config" / "asset_config.json",
+)
 _NEWS_PROVIDER = get_news_provider(_MOCK_DIR)
 MARKET_CACHE_SECONDS = 40 * 60
 NEWS_CACHE_SECONDS = 5 * 60
@@ -315,11 +318,13 @@ def _read_json(name: str) -> Any:
 
 
 def _read_asset_config() -> list[dict[str, Any]]:
-    if not _ASSET_CONFIG_PATH.exists():
-        return []
-    with _ASSET_CONFIG_PATH.open("r", encoding="utf-8-sig") as fh:
-        payload = json.load(fh)
-    return payload if isinstance(payload, list) else []
+    for path in _ASSET_CONFIG_CANDIDATES:
+        if not path.exists():
+            continue
+        with path.open("r", encoding="utf-8-sig") as fh:
+            payload = json.load(fh)
+        return payload if isinstance(payload, list) else []
+    return []
 
 
 def _yahoo_stock_assets() -> list[dict[str, Any]]:

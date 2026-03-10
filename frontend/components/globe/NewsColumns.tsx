@@ -176,7 +176,7 @@ function NewsList({
         </button>
       </div>
       <div className="scroll-thin min-h-0 flex-1 overflow-y-auto pr-1">
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           {rows.map((item, idx) => {
             const key = rowKey(item, idx);
             const translation = translations[key];
@@ -192,9 +192,9 @@ function NewsList({
             return (
               <article
                 key={key}
-                className="rounded-xl border border-slate-700/55 bg-[rgba(7,14,26,0.62)] px-3 py-2.5 text-[11px] text-slate-100 shadow-[0_10px_24px_rgba(0,0,0,0.22)]"
+                className="rounded-xl border border-slate-700/55 bg-[rgba(7,14,26,0.62)] px-3 py-2 text-[11px] text-slate-100 shadow-[0_10px_24px_rgba(0,0,0,0.22)]"
               >
-                <div className="mb-2 flex items-start justify-between gap-2">
+                <div className="mb-1.5 flex items-start justify-between gap-2">
                   <div className="flex min-w-0 items-center gap-2">
                     <img
                       src={sourceLogo(item)}
@@ -232,18 +232,18 @@ function NewsList({
                   href={item.url}
                   target="_blank"
                   rel="noreferrer"
-                  className={`block text-[12px] font-semibold leading-snug text-slate-50 transition ${goldThemeEnabled ? "hover:text-[#ffe4a6]" : "hover:text-[#97b7ff]"}`}
+                  className={`line-clamp-2 block text-[12px] font-semibold leading-snug text-slate-50 transition ${goldThemeEnabled ? "hover:text-[#ffe4a6]" : "hover:text-[#97b7ff]"}`}
                 >
                   {titleText}
                 </a>
 
                 {descriptionText ? (
-                  <p className="mt-1.5 line-clamp-2 text-[10px] leading-snug text-slate-400">
+                  <p className="mt-1 line-clamp-2 text-[10px] leading-snug text-slate-400">
                     {descriptionText}
                   </p>
                 ) : null}
 
-                <div className="mt-2 flex items-center justify-between gap-2">
+                <div className="mt-1.5 flex items-center justify-between gap-2">
                   <div className="flex min-w-0 flex-wrap items-center gap-2">
                     <span className="inline-flex items-center gap-1 text-[9px] font-semibold text-slate-300">
                       <span
