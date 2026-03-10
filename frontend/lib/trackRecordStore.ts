@@ -1,4 +1,4 @@
-
+import { promises as fs } from "fs";
 import path from "path";
 
 import type { TrackRecordTradeInput, TradeDirection } from "@/components/track-record/metrics";
@@ -16,7 +16,6 @@ const APPENDED_DATASET_PATH = path.join(
   "track-record",
   "trades_appended_api.json"
 );
-console.log("TRACK RECORD PATH:", HISTORICAL_DATASET_PATH);
 
 type StoredTrade = {
   date: string;
@@ -43,7 +42,9 @@ function deriveDirection(seed: string, index: number): TradeDirection {
   return hash % 100 < 51 ? "Long" : "Short";
 }
 
-function tradeKey(trade: Pick<TrackRecordTradeInput, "date" | "return_pct" | "trade_result" | "trade_direction">): string {
+function tradeKey(
+  trade: Pick<TrackRecordTradeInput, "date" | "return_pct" | "trade_result" | "trade_direction">
+): string {
   return [
     new Date(trade.date).toISOString(),
     Number(trade.return_pct).toFixed(4),
@@ -53,44 +54,47 @@ function tradeKey(trade: Pick<TrackRecordTradeInput, "date" | "return_pct" | "tr
 }
 
 export async function loadHistoricalTrackRecordTrades(): Promise<TrackRecordTradeInput[]> {
+  try {
+    const content = await fs.readFile(HISTORICAL_DATASET_PATH, "utf8");
 
-  const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/track-record/trades_clean_compounded.csv`);
+    const lines = content
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
 
-  const text = await res.text();
+    if (lines.length <= 1) return [];
 
-  const lines = text
-    .split("\n")
-    .map(l => l.trim())
-    .filter(Boolean);
+    return lines.slice(1).map((line, index) => {
+      const [closeDate, gainValue] = line.split(",");
 
-  if (lines.length <= 1) return [];
+      const returnPct = Number.parseFloat(gainValue);
 
-  return lines.slice(1).map((line, index) => {
-
-    const [closeDate, gainValue] = line.split(",");
-
-    const returnPct = Number.parseFloat(gainValue);
-
-    return {
-      date: new Date(closeDate).toISOString(),
-      return_pct: returnPct,
-      trade_result: returnPct,
-      trade_direction: deriveDirection(closeDate, index),
-      source: "historical"
-    };
-  });
+      return {
+        date: normalizeDate(closeDate),
+        return_pct: returnPct,
+        trade_result: returnPct,
+        trade_direction: deriveDirection(closeDate, index),
+        source: "historical",
+      };
+    });
+  } catch (error) {
+    console.error("TRACK RECORD CSV ERROR:", error);
+    return [];
+  }
 }
 
 export async function loadAppendedTrackRecordTrades(): Promise<StoredTrade[]> {
   try {
     const raw = await fs.readFile(APPENDED_DATASET_PATH, "utf8");
     const parsed = JSON.parse(raw);
+
     if (!Array.isArray(parsed)) return [];
 
     return parsed
       .map((item, index) => {
         const date = normalizeDate(String(item?.date ?? ""));
         const returnPct = Number(item?.return_pct);
+
         if (!Number.isFinite(returnPct)) return null;
 
         return {
@@ -107,37 +111,59 @@ export async function loadAppendedTrackRecordTrades(): Promise<StoredTrade[]> {
         };
       })
       .filter((item): item is StoredTrade => item != null)
-      .sort((left, right) => new Date(left.date).getTime() - new Date(right.date).getTime());
+      .sort(
+        (left, right) =>
+          new Date(left.date).getTime() - new Date(right.date).getTime()
+      );
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
       return [];
     }
-    throw error;
+
+    console.error("APPENDED TRACK RECORD ERROR:", error);
+    return [];
   }
 }
 
 export async function loadTrackRecordTrades(): Promise<TrackRecordTradeInput[]> {
   const historical = await loadHistoricalTrackRecordTrades();
   const appended = await loadAppendedTrackRecordTrades();
-  return [...historical, ...appended].sort((left, right) => new Date(left.date).getTime() - new Date(right.date).getTime());
+
+  return [...historical, ...appended].sort(
+    (left, right) =>
+      new Date(left.date).getTime() - new Date(right.date).getTime()
+  );
 }
 
-export async function appendTrackRecordTrades(input: TrackRecordTradeInput | TrackRecordTradeInput[]): Promise<TrackRecordTradeInput[]> {
+export async function appendTrackRecordTrades(
+  input: TrackRecordTradeInput | TrackRecordTradeInput[]
+): Promise<TrackRecordTradeInput[]> {
   const trades = Array.isArray(input) ? input : [input];
+
   const historical = await loadHistoricalTrackRecordTrades();
-  const historicalEndDate = historical.length > 0 ? new Date(historical[historical.length - 1].date).getTime() : null;
+
+  const historicalEndDate =
+    historical.length > 0
+      ? new Date(historical[historical.length - 1].date).getTime()
+      : null;
+
   const existingAppended = await loadAppendedTrackRecordTrades();
 
   const normalized = trades.map((trade, index) => {
     const date = normalizeDate(trade.date);
+
     const timestamp = new Date(date).getTime();
+
     if (historicalEndDate != null && timestamp <= historicalEndDate) {
-      throw new Error("Appended trades must be later than the historical dataset end date.");
+      throw new Error(
+        "Appended trades must be later than the historical dataset end date."
+      );
     }
 
     const returnPct = Number(trade.return_pct);
+
     if (!Number.isFinite(returnPct)) {
-      throw new Error(`Invalid return_pct for appended trade: ${trade.return_pct}`);
+      throw new Error(`Invalid return_pct: ${trade.return_pct}`);
     }
 
     const tradeDirection =
@@ -148,22 +174,39 @@ export async function appendTrackRecordTrades(input: TrackRecordTradeInput | Tra
     return {
       date,
       return_pct: Number(returnPct),
-      trade_result: Number.isFinite(Number(trade.trade_result)) ? Number(trade.trade_result) : Number(returnPct),
+      trade_result: Number.isFinite(Number(trade.trade_result))
+        ? Number(trade.trade_result)
+        : Number(returnPct),
       trade_direction: tradeDirection,
       source: "api" as const,
     } satisfies StoredTrade;
   });
 
   const merged = [...existingAppended, ...normalized];
-  const deduped = Array.from(new Map(merged.map((trade) => [tradeKey(trade), trade])).values()).sort(
-    (left, right) => new Date(left.date).getTime() - new Date(right.date).getTime(),
+
+  const deduped = Array.from(
+    new Map(merged.map((trade) => [tradeKey(trade), trade])).values()
+  ).sort(
+    (left, right) =>
+      new Date(left.date).getTime() - new Date(right.date).getTime()
   );
 
-  await fs.writeFile(APPENDED_DATASET_PATH, JSON.stringify(deduped, null, 2), "utf8");
-  return [...historical, ...deduped].sort((left, right) => new Date(left.date).getTime() - new Date(right.date).getTime());
+  await fs.writeFile(
+    APPENDED_DATASET_PATH,
+    JSON.stringify(deduped, null, 2),
+    "utf8"
+  );
+
+  return [...historical, ...deduped].sort(
+    (left, right) =>
+      new Date(left.date).getTime() - new Date(right.date).getTime()
+  );
 }
 
 export async function getHistoricalTrackRecordEndDate(): Promise<string | null> {
   const historical = await loadHistoricalTrackRecordTrades();
-  return historical.length > 0 ? historical[historical.length - 1].date : null;
+
+  return historical.length > 0
+    ? historical[historical.length - 1].date
+    : null;
 }
