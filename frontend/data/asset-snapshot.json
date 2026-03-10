@@ -1,0 +1,4261 @@
+{
+  "updatedAt": "2026-03-10T10:27:23+00:00",
+  "count": 185,
+  "items": [
+    {
+      "id": "usd",
+      "name": "USD",
+      "category": "Major FX",
+      "iconKey": "",
+      "tvSource": "DX-Y.NYB",
+      "symbol": "DX-Y.NYB",
+      "lat": 38.0,
+      "lng": -97.0,
+      "country": "United States",
+      "color": "#6df8d8",
+      "defaultEnabled": true,
+      "watchlistFeatured": true,
+      "showOnGlobe": true,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 38.0,
+          "lng": -97.0,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "eur",
+      "name": "EUR",
+      "category": "Major FX",
+      "iconKey": "",
+      "tvSource": "EURUSD",
+      "symbol": "EURUSD",
+      "lat": 50.5,
+      "lng": 10.0,
+      "country": "Germany / EU",
+      "color": "#62a8ff",
+      "defaultEnabled": true,
+      "watchlistFeatured": true,
+      "showOnGlobe": true,
+      "locations": [
+        {
+          "label": "Germany / EU",
+          "lat": 50.5,
+          "lng": 10.0,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "jpy",
+      "name": "JPY",
+      "category": "Major FX",
+      "iconKey": "",
+      "tvSource": "USDJPY",
+      "symbol": "USDJPY",
+      "lat": 35.7,
+      "lng": 139.7,
+      "country": "Japan",
+      "color": "#8ee95f",
+      "defaultEnabled": true,
+      "watchlistFeatured": true,
+      "showOnGlobe": true,
+      "locations": [
+        {
+          "label": "Japan",
+          "lat": 35.7,
+          "lng": 139.7,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "gbp",
+      "name": "GBP",
+      "category": "Major FX",
+      "iconKey": "",
+      "tvSource": "GBPUSD",
+      "symbol": "GBPUSD",
+      "lat": 51.5,
+      "lng": -0.1,
+      "country": "United Kingdom",
+      "color": "#f6b93b",
+      "defaultEnabled": true,
+      "watchlistFeatured": true,
+      "showOnGlobe": true,
+      "locations": [
+        {
+          "label": "United Kingdom",
+          "lat": 51.5,
+          "lng": -0.1,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "chf",
+      "name": "CHF",
+      "category": "Major FX",
+      "iconKey": "",
+      "tvSource": "USDCHF",
+      "symbol": "USDCHF",
+      "lat": 47.4,
+      "lng": 8.5,
+      "country": "Switzerland",
+      "color": "#d6f06a",
+      "defaultEnabled": true,
+      "watchlistFeatured": true,
+      "showOnGlobe": true,
+      "locations": [
+        {
+          "label": "Switzerland",
+          "lat": 47.4,
+          "lng": 8.5,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "aud",
+      "name": "AUD",
+      "category": "Major FX",
+      "iconKey": "",
+      "tvSource": "AUDUSD",
+      "symbol": "AUDUSD",
+      "lat": -33.9,
+      "lng": 151.2,
+      "country": "Australia",
+      "color": "#ff9f43",
+      "defaultEnabled": true,
+      "watchlistFeatured": true,
+      "showOnGlobe": true,
+      "locations": [
+        {
+          "label": "Australia",
+          "lat": -33.9,
+          "lng": 151.2,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "cad",
+      "name": "CAD",
+      "category": "Major FX",
+      "iconKey": "",
+      "tvSource": "USDCAD",
+      "symbol": "USDCAD",
+      "lat": 56.1,
+      "lng": -106.3,
+      "country": "Canada",
+      "color": "#42d9ff",
+      "defaultEnabled": true,
+      "watchlistFeatured": true,
+      "showOnGlobe": true,
+      "locations": [
+        {
+          "label": "Canada",
+          "lat": 56.1,
+          "lng": -106.3,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "nzd",
+      "name": "NZD",
+      "category": "Major FX",
+      "iconKey": "",
+      "tvSource": "NZDUSD",
+      "symbol": "NZDUSD",
+      "lat": -41.3,
+      "lng": 174.8,
+      "country": "New Zealand",
+      "color": "#7ef5a7",
+      "defaultEnabled": true,
+      "watchlistFeatured": true,
+      "showOnGlobe": true,
+      "locations": [
+        {
+          "label": "New Zealand",
+          "lat": -41.3,
+          "lng": 174.8,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "gold",
+      "name": "Gold",
+      "category": "Metals",
+      "iconKey": "",
+      "tvSource": "XAUUSD",
+      "symbol": "XAUUSD",
+      "lat": 40.7,
+      "lng": -74.0,
+      "country": "United States",
+      "color": "#ffd166",
+      "defaultEnabled": true,
+      "watchlistFeatured": true,
+      "showOnGlobe": true,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7,
+          "lng": -74.0,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "silver",
+      "name": "Silver",
+      "category": "Metals",
+      "iconKey": "",
+      "tvSource": "XAGUSD",
+      "symbol": "XAGUSD",
+      "lat": 29.7,
+      "lng": -95.3,
+      "country": "United States",
+      "color": "#d9dde2",
+      "defaultEnabled": true,
+      "watchlistFeatured": true,
+      "showOnGlobe": true,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 29.7,
+          "lng": -95.3,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "wheat",
+      "name": "Wheat",
+      "category": "Commodities",
+      "iconKey": "",
+      "tvSource": "ZW=F",
+      "symbol": "ZW=F",
+      "lat": 49.0,
+      "lng": 31.5,
+      "country": "Ukraine",
+      "color": "#f7ca88",
+      "defaultEnabled": true,
+      "watchlistFeatured": true,
+      "showOnGlobe": true,
+      "locations": [
+        {
+          "label": "Ukraine",
+          "lat": 49.0,
+          "lng": 31.5,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "soybean",
+      "name": "Soybean",
+      "category": "Commodities",
+      "iconKey": "",
+      "tvSource": "SOYBEAN",
+      "symbol": "SOYBEAN",
+      "lat": -15.8,
+      "lng": -47.9,
+      "country": "Brazil",
+      "color": "#f4d35e",
+      "defaultEnabled": true,
+      "watchlistFeatured": true,
+      "showOnGlobe": true,
+      "locations": [
+        {
+          "label": "Brazil",
+          "lat": -15.8,
+          "lng": -47.9,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "sugar",
+      "name": "Sugar",
+      "category": "Commodities",
+      "iconKey": "",
+      "tvSource": "SUGAR",
+      "symbol": "SUGAR",
+      "lat": -22.9,
+      "lng": -43.2,
+      "country": "Brazil",
+      "color": "#eccc68",
+      "defaultEnabled": true,
+      "watchlistFeatured": true,
+      "showOnGlobe": true,
+      "locations": [
+        {
+          "label": "Brazil",
+          "lat": -22.9,
+          "lng": -43.2,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "coffee",
+      "name": "Coffee",
+      "category": "Commodities",
+      "iconKey": "",
+      "tvSource": "COFFEE",
+      "symbol": "COFFEE",
+      "lat": -22.0,
+      "lng": -43.5,
+      "country": "Brazil",
+      "color": "#c99a6b",
+      "defaultEnabled": true,
+      "watchlistFeatured": true,
+      "showOnGlobe": true,
+      "locations": [
+        {
+          "label": "Brazil",
+          "lat": -22.0,
+          "lng": -43.5,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "cocoa",
+      "name": "Cocoa",
+      "category": "Commodities",
+      "iconKey": "",
+      "tvSource": "COCOA",
+      "symbol": "COCOA",
+      "lat": 7.9,
+      "lng": -1.0,
+      "country": "Ghana",
+      "color": "#8d6e63",
+      "defaultEnabled": true,
+      "watchlistFeatured": true,
+      "showOnGlobe": true,
+      "locations": [
+        {
+          "label": "Ghana",
+          "lat": 7.9,
+          "lng": -1.0,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "corn",
+      "name": "Corn",
+      "category": "Commodities",
+      "iconKey": "",
+      "tvSource": "ZC=F",
+      "symbol": "ZC=F",
+      "lat": 41.9,
+      "lng": -93.6,
+      "country": "United States",
+      "color": "#f6e58d",
+      "defaultEnabled": true,
+      "watchlistFeatured": true,
+      "showOnGlobe": true,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 41.9,
+          "lng": -93.6,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "oil",
+      "name": "Oil (WTI)",
+      "category": "Commodities",
+      "iconKey": "",
+      "tvSource": "WTI",
+      "symbol": "WTI",
+      "lat": 24.7,
+      "lng": 46.7,
+      "country": "Saudi Arabia",
+      "color": "#ff6b6b",
+      "defaultEnabled": true,
+      "watchlistFeatured": true,
+      "showOnGlobe": true,
+      "locations": [
+        {
+          "label": "Saudi Arabia",
+          "lat": 24.7,
+          "lng": 46.7,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "brent",
+      "name": "Oil (Brent)",
+      "category": "Commodities",
+      "iconKey": "",
+      "tvSource": "BRENT",
+      "symbol": "BRENT",
+      "lat": 25.3,
+      "lng": 55.3,
+      "country": "UAE",
+      "color": "#ff8787",
+      "defaultEnabled": true,
+      "watchlistFeatured": true,
+      "showOnGlobe": true,
+      "locations": [
+        {
+          "label": "UAE",
+          "lat": 25.3,
+          "lng": 55.3,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "ngas",
+      "name": "Natural Gas",
+      "category": "Commodities",
+      "iconKey": "",
+      "tvSource": "NGAS",
+      "symbol": "NGAS",
+      "lat": 31.2,
+      "lng": 121.5,
+      "country": "China",
+      "color": "#74b9ff",
+      "defaultEnabled": true,
+      "watchlistFeatured": true,
+      "showOnGlobe": true,
+      "locations": [
+        {
+          "label": "China",
+          "lat": 31.2,
+          "lng": 121.5,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "us10y",
+      "name": "US10Y",
+      "category": "Bonds",
+      "iconKey": "",
+      "tvSource": "^TNX",
+      "symbol": "^TNX",
+      "lat": 38.9,
+      "lng": -77.0,
+      "country": "United States",
+      "color": "#9c88ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": true,
+      "showOnGlobe": true,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 38.9,
+          "lng": -77.0,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "de10y",
+      "name": "DE10Y",
+      "category": "Bonds",
+      "iconKey": "",
+      "tvSource": "DE10YB=RR",
+      "symbol": "DE10YB=RR",
+      "lat": 52.5,
+      "lng": 13.4,
+      "country": "Germany",
+      "color": "#a29bfe",
+      "defaultEnabled": false,
+      "watchlistFeatured": true,
+      "showOnGlobe": true,
+      "locations": [
+        {
+          "label": "Germany",
+          "lat": 52.5,
+          "lng": 13.4,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "uk10y",
+      "name": "UK10Y",
+      "category": "Bonds",
+      "iconKey": "",
+      "tvSource": "GB10YB=RR",
+      "symbol": "GB10YB=RR",
+      "lat": 51.5,
+      "lng": -0.1,
+      "country": "United Kingdom",
+      "color": "#b197fc",
+      "defaultEnabled": false,
+      "watchlistFeatured": true,
+      "showOnGlobe": true,
+      "locations": [
+        {
+          "label": "United Kingdom",
+          "lat": 51.5,
+          "lng": -0.1,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "aapl",
+      "name": "AAPL",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "AAPL",
+      "symbol": "AAPL",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": true,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "msft",
+      "name": "MSFT",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "MSFT",
+      "symbol": "MSFT",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": true,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "nvda",
+      "name": "NVDA",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "NVDA",
+      "symbol": "NVDA",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": true,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "amzn",
+      "name": "AMZN",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "AMZN",
+      "symbol": "AMZN",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": true,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "googl",
+      "name": "GOOGL",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "GOOGL",
+      "symbol": "GOOGL",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": true,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "goog",
+      "name": "GOOG",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "GOOG",
+      "symbol": "GOOG",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": true,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "meta",
+      "name": "META",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "META",
+      "symbol": "META",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": true,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "tsla",
+      "name": "TSLA",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "TSLA",
+      "symbol": "TSLA",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": true,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "avgo",
+      "name": "AVGO",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "AVGO",
+      "symbol": "AVGO",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": true,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "amd",
+      "name": "AMD",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "AMD",
+      "symbol": "AMD",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": true,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "intc",
+      "name": "INTC",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "INTC",
+      "symbol": "INTC",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": true,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "csco",
+      "name": "CSCO",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "CSCO",
+      "symbol": "CSCO",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": true,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "orcl",
+      "name": "ORCL",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "ORCL",
+      "symbol": "ORCL",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": true,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "ibm",
+      "name": "IBM",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "IBM",
+      "symbol": "IBM",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": true,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "adbe",
+      "name": "ADBE",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "ADBE",
+      "symbol": "ADBE",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": true,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "crm",
+      "name": "CRM",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "CRM",
+      "symbol": "CRM",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": true,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "now",
+      "name": "NOW",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "NOW",
+      "symbol": "NOW",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": true,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "snow",
+      "name": "SNOW",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "SNOW",
+      "symbol": "SNOW",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": true,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "pltr",
+      "name": "PLTR",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "PLTR",
+      "symbol": "PLTR",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": true,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "nflx",
+      "name": "NFLX",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "NFLX",
+      "symbol": "NFLX",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": true,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "qcom",
+      "name": "QCOM",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "QCOM",
+      "symbol": "QCOM",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "txn",
+      "name": "TXN",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "TXN",
+      "symbol": "TXN",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "mu",
+      "name": "MU",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "MU",
+      "symbol": "MU",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "amat",
+      "name": "AMAT",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "AMAT",
+      "symbol": "AMAT",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "lrcx",
+      "name": "LRCX",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "LRCX",
+      "symbol": "LRCX",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "klac",
+      "name": "KLAC",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "KLAC",
+      "symbol": "KLAC",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "adi",
+      "name": "ADI",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "ADI",
+      "symbol": "ADI",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "nxpi",
+      "name": "NXPI",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "NXPI",
+      "symbol": "NXPI",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "panw",
+      "name": "PANW",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "PANW",
+      "symbol": "PANW",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "crwd",
+      "name": "CRWD",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "CRWD",
+      "symbol": "CRWD",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "ftnt",
+      "name": "FTNT",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "FTNT",
+      "symbol": "FTNT",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "zs",
+      "name": "ZS",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "ZS",
+      "symbol": "ZS",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "net",
+      "name": "NET",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "NET",
+      "symbol": "NET",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "ddog",
+      "name": "DDOG",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "DDOG",
+      "symbol": "DDOG",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "mdb",
+      "name": "MDB",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "MDB",
+      "symbol": "MDB",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "team",
+      "name": "TEAM",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "TEAM",
+      "symbol": "TEAM",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "shop",
+      "name": "SHOP",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "SHOP",
+      "symbol": "SHOP",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "uber",
+      "name": "UBER",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "UBER",
+      "symbol": "UBER",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "abnb",
+      "name": "ABNB",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "ABNB",
+      "symbol": "ABNB",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "sq",
+      "name": "SQ",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "SQ",
+      "symbol": "SQ",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "pypl",
+      "name": "PYPL",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "PYPL",
+      "symbol": "PYPL",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "intu",
+      "name": "INTU",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "INTU",
+      "symbol": "INTU",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "adp",
+      "name": "ADP",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "ADP",
+      "symbol": "ADP",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "bkng",
+      "name": "BKNG",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "BKNG",
+      "symbol": "BKNG",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "ea",
+      "name": "EA",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "EA",
+      "symbol": "EA",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "ttwo",
+      "name": "TTWO",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "TTWO",
+      "symbol": "TTWO",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "roku",
+      "name": "ROKU",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "ROKU",
+      "symbol": "ROKU",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "spot",
+      "name": "SPOT",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "SPOT",
+      "symbol": "SPOT",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "zm",
+      "name": "ZM",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "ZM",
+      "symbol": "ZM",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "arm",
+      "name": "ARM",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "ARM",
+      "symbol": "ARM",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "smci",
+      "name": "SMCI",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "SMCI",
+      "symbol": "SMCI",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "dell",
+      "name": "DELL",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "DELL",
+      "symbol": "DELL",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "hpq",
+      "name": "HPQ",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "HPQ",
+      "symbol": "HPQ",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "anet",
+      "name": "ANET",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "ANET",
+      "symbol": "ANET",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "deck",
+      "name": "DECK",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "DECK",
+      "symbol": "DECK",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "jpm",
+      "name": "JPM",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "JPM",
+      "symbol": "JPM",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "bac",
+      "name": "BAC",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "BAC",
+      "symbol": "BAC",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "wfc",
+      "name": "WFC",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "WFC",
+      "symbol": "WFC",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "c",
+      "name": "C",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "C",
+      "symbol": "C",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "gs",
+      "name": "GS",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "GS",
+      "symbol": "GS",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "ms",
+      "name": "MS",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "MS",
+      "symbol": "MS",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "schw",
+      "name": "SCHW",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "SCHW",
+      "symbol": "SCHW",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "blk",
+      "name": "BLK",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "BLK",
+      "symbol": "BLK",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "axp",
+      "name": "AXP",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "AXP",
+      "symbol": "AXP",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "v",
+      "name": "V",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "V",
+      "symbol": "V",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "ma",
+      "name": "MA",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "MA",
+      "symbol": "MA",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "brk_b",
+      "name": "BRK.B",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "BRK.B",
+      "symbol": "BRK.B",
+      "lat": 50.1109,
+      "lng": 8.6821,
+      "country": "Europe",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "Europe",
+          "lat": 50.1109,
+          "lng": 8.6821,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "spgi",
+      "name": "SPGI",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "SPGI",
+      "symbol": "SPGI",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "ice",
+      "name": "ICE",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "ICE",
+      "symbol": "ICE",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "cme",
+      "name": "CME",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "CME",
+      "symbol": "CME",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "msci",
+      "name": "MSCI",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "MSCI",
+      "symbol": "MSCI",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "jnj",
+      "name": "JNJ",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "JNJ",
+      "symbol": "JNJ",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "unh",
+      "name": "UNH",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "UNH",
+      "symbol": "UNH",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "pfe",
+      "name": "PFE",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "PFE",
+      "symbol": "PFE",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "mrk",
+      "name": "MRK",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "MRK",
+      "symbol": "MRK",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "abbv",
+      "name": "ABBV",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "ABBV",
+      "symbol": "ABBV",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "amgn",
+      "name": "AMGN",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "AMGN",
+      "symbol": "AMGN",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "gild",
+      "name": "GILD",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "GILD",
+      "symbol": "GILD",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "bmy",
+      "name": "BMY",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "BMY",
+      "symbol": "BMY",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "lly",
+      "name": "LLY",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "LLY",
+      "symbol": "LLY",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "tmo",
+      "name": "TMO",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "TMO",
+      "symbol": "TMO",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "dhr",
+      "name": "DHR",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "DHR",
+      "symbol": "DHR",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "abt",
+      "name": "ABT",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "ABT",
+      "symbol": "ABT",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "isrg",
+      "name": "ISRG",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "ISRG",
+      "symbol": "ISRG",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "mdt",
+      "name": "MDT",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "MDT",
+      "symbol": "MDT",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "syk",
+      "name": "SYK",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "SYK",
+      "symbol": "SYK",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "vrtx",
+      "name": "VRTX",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "VRTX",
+      "symbol": "VRTX",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "regn",
+      "name": "REGN",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "REGN",
+      "symbol": "REGN",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "ci",
+      "name": "CI",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "CI",
+      "symbol": "CI",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "hum",
+      "name": "HUM",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "HUM",
+      "symbol": "HUM",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "pg",
+      "name": "PG",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "PG",
+      "symbol": "PG",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "ko",
+      "name": "KO",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "KO",
+      "symbol": "KO",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "pep",
+      "name": "PEP",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "PEP",
+      "symbol": "PEP",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "cost",
+      "name": "COST",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "COST",
+      "symbol": "COST",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "wmt",
+      "name": "WMT",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "WMT",
+      "symbol": "WMT",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "hd",
+      "name": "HD",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "HD",
+      "symbol": "HD",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "low",
+      "name": "LOW",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "LOW",
+      "symbol": "LOW",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "mcd",
+      "name": "MCD",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "MCD",
+      "symbol": "MCD",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "sbux",
+      "name": "SBUX",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "SBUX",
+      "symbol": "SBUX",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "nke",
+      "name": "NKE",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "NKE",
+      "symbol": "NKE",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "tgt",
+      "name": "TGT",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "TGT",
+      "symbol": "TGT",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "tjx",
+      "name": "TJX",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "TJX",
+      "symbol": "TJX",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "dis",
+      "name": "DIS",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "DIS",
+      "symbol": "DIS",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "cmg",
+      "name": "CMG",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "CMG",
+      "symbol": "CMG",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "yum",
+      "name": "YUM",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "YUM",
+      "symbol": "YUM",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "mdlz",
+      "name": "MDLZ",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "MDLZ",
+      "symbol": "MDLZ",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "pm",
+      "name": "PM",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "PM",
+      "symbol": "PM",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "mo",
+      "name": "MO",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "MO",
+      "symbol": "MO",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "cat",
+      "name": "CAT",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "CAT",
+      "symbol": "CAT",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "de",
+      "name": "DE",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "DE",
+      "symbol": "DE",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "ba",
+      "name": "BA",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "BA",
+      "symbol": "BA",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "ge",
+      "name": "GE",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "GE",
+      "symbol": "GE",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "hon",
+      "name": "HON",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "HON",
+      "symbol": "HON",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "lmt",
+      "name": "LMT",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "LMT",
+      "symbol": "LMT",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "rtx",
+      "name": "RTX",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "RTX",
+      "symbol": "RTX",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "noc",
+      "name": "NOC",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "NOC",
+      "symbol": "NOC",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "gd",
+      "name": "GD",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "GD",
+      "symbol": "GD",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "unp",
+      "name": "UNP",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "UNP",
+      "symbol": "UNP",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "ups",
+      "name": "UPS",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "UPS",
+      "symbol": "UPS",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "fdx",
+      "name": "FDX",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "FDX",
+      "symbol": "FDX",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "csx",
+      "name": "CSX",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "CSX",
+      "symbol": "CSX",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "nsc",
+      "name": "NSC",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "NSC",
+      "symbol": "NSC",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "mmm",
+      "name": "MMM",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "MMM",
+      "symbol": "MMM",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "xom",
+      "name": "XOM",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "XOM",
+      "symbol": "XOM",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "cvx",
+      "name": "CVX",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "CVX",
+      "symbol": "CVX",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "cop",
+      "name": "COP",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "COP",
+      "symbol": "COP",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "slb",
+      "name": "SLB",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "SLB",
+      "symbol": "SLB",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "eog",
+      "name": "EOG",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "EOG",
+      "symbol": "EOG",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "pxd",
+      "name": "PXD",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "PXD",
+      "symbol": "PXD",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "psx",
+      "name": "PSX",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "PSX",
+      "symbol": "PSX",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "vlo",
+      "name": "VLO",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "VLO",
+      "symbol": "VLO",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "oxy",
+      "name": "OXY",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "OXY",
+      "symbol": "OXY",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "lin",
+      "name": "LIN",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "LIN",
+      "symbol": "LIN",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "apd",
+      "name": "APD",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "APD",
+      "symbol": "APD",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "shw",
+      "name": "SHW",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "SHW",
+      "symbol": "SHW",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "nem",
+      "name": "NEM",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "NEM",
+      "symbol": "NEM",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "nee",
+      "name": "NEE",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "NEE",
+      "symbol": "NEE",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "duk",
+      "name": "DUK",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "DUK",
+      "symbol": "DUK",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "so",
+      "name": "SO",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "SO",
+      "symbol": "SO",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "aep",
+      "name": "AEP",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "AEP",
+      "symbol": "AEP",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "d",
+      "name": "D",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "D",
+      "symbol": "D",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "exc",
+      "name": "EXC",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "EXC",
+      "symbol": "EXC",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "vz",
+      "name": "VZ",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "VZ",
+      "symbol": "VZ",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "t",
+      "name": "T",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "T",
+      "symbol": "T",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "tmus",
+      "name": "TMUS",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "TMUS",
+      "symbol": "TMUS",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "amt",
+      "name": "AMT",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "AMT",
+      "symbol": "AMT",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "cci",
+      "name": "CCI",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "CCI",
+      "symbol": "CCI",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "pld",
+      "name": "PLD",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "PLD",
+      "symbol": "PLD",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "tsm",
+      "name": "TSM",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "TSM",
+      "symbol": "TSM",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "asml",
+      "name": "ASML",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "ASML",
+      "symbol": "ASML",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "nvo",
+      "name": "NVO",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "NVO",
+      "symbol": "NVO",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "nesn_sw",
+      "name": "NESN.SW",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "NESN.SW",
+      "symbol": "NESN.SW",
+      "lat": 47.3769,
+      "lng": 8.5417,
+      "country": "Switzerland",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "Switzerland",
+          "lat": 47.3769,
+          "lng": 8.5417,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "sap",
+      "name": "SAP",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "SAP",
+      "symbol": "SAP",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "country": "United States",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "United States",
+          "lat": 40.7128,
+          "lng": -74.006,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "bmw_de",
+      "name": "BMW.DE",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "BMW.DE",
+      "symbol": "BMW.DE",
+      "lat": 50.1109,
+      "lng": 8.6821,
+      "country": "Germany",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "Germany",
+          "lat": 50.1109,
+          "lng": 8.6821,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "bas_de",
+      "name": "BAS.DE",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "BAS.DE",
+      "symbol": "BAS.DE",
+      "lat": 50.1109,
+      "lng": 8.6821,
+      "country": "Germany",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "Germany",
+          "lat": 50.1109,
+          "lng": 8.6821,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "sap_de",
+      "name": "SAP.DE",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "SAP.DE",
+      "symbol": "SAP.DE",
+      "lat": 50.1109,
+      "lng": 8.6821,
+      "country": "Germany",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "Germany",
+          "lat": 50.1109,
+          "lng": 8.6821,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "sie_de",
+      "name": "SIE.DE",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "SIE.DE",
+      "symbol": "SIE.DE",
+      "lat": 50.1109,
+      "lng": 8.6821,
+      "country": "Germany",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "Germany",
+          "lat": 50.1109,
+          "lng": 8.6821,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "alv_de",
+      "name": "ALV.DE",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "ALV.DE",
+      "symbol": "ALV.DE",
+      "lat": 50.1109,
+      "lng": 8.6821,
+      "country": "Germany",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "Germany",
+          "lat": 50.1109,
+          "lng": 8.6821,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "dte_de",
+      "name": "DTE.DE",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "DTE.DE",
+      "symbol": "DTE.DE",
+      "lat": 50.1109,
+      "lng": 8.6821,
+      "country": "Germany",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "Germany",
+          "lat": 50.1109,
+          "lng": 8.6821,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "bayn_de",
+      "name": "BAYN.DE",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "BAYN.DE",
+      "symbol": "BAYN.DE",
+      "lat": 50.1109,
+      "lng": 8.6821,
+      "country": "Germany",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "Germany",
+          "lat": 50.1109,
+          "lng": 8.6821,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "mbg_de",
+      "name": "MBG.DE",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "MBG.DE",
+      "symbol": "MBG.DE",
+      "lat": 50.1109,
+      "lng": 8.6821,
+      "country": "Germany",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "Germany",
+          "lat": 50.1109,
+          "lng": 8.6821,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "rwe_de",
+      "name": "RWE.DE",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "RWE.DE",
+      "symbol": "RWE.DE",
+      "lat": 50.1109,
+      "lng": 8.6821,
+      "country": "Germany",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "Germany",
+          "lat": 50.1109,
+          "lng": 8.6821,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "vow3_de",
+      "name": "VOW3.DE",
+      "category": "Stocks",
+      "iconKey": "stock",
+      "tvSource": "VOW3.DE",
+      "symbol": "VOW3.DE",
+      "lat": 50.1109,
+      "lng": 8.6821,
+      "country": "Germany",
+      "color": "#84a8ff",
+      "defaultEnabled": false,
+      "watchlistFeatured": false,
+      "showOnGlobe": false,
+      "locations": [
+        {
+          "label": "Germany",
+          "lat": 50.1109,
+          "lng": 8.6821,
+          "weight": 1.0
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,72 @@
+{
+  "gold": [
+    {
+      "title": "Gold steadies as bullion demand tracks central bank buying flows",
+      "url": "https://www.kitco.com/",
+      "source": "Kitco",
+      "publishedAt": "2026-03-03T11:00:00Z"
+    },
+    {
+      "title": "Bullion gains fade after hotter inflation expectations in rates market",
+      "url": "https://www.reuters.com/markets/commodities/",
+      "source": "Reuters",
+      "publishedAt": "2026-03-02T10:10:00Z"
+    }
+  ],
+  "oil": [
+    {
+      "title": "Oil rally extends as OPEC supply discipline offsets demand concerns",
+      "url": "https://www.reuters.com/markets/commodities/",
+      "source": "Reuters",
+      "publishedAt": "2026-03-03T13:30:00Z"
+    },
+    {
+      "title": "Crude traders reprice disruption risk after fresh Middle East headlines",
+      "url": "https://www.ft.com/commodities",
+      "source": "Financial Times",
+      "publishedAt": "2026-03-02T18:45:00Z"
+    }
+  ],
+  "sp500": [
+    {
+      "title": "US equities hold gains as Fed rate path and earnings remain supportive",
+      "url": "https://www.cnbc.com/markets/",
+      "source": "CNBC",
+      "publishedAt": "2026-03-03T15:00:00Z"
+    },
+    {
+      "title": "S&P 500 breadth improves while policy-rate sensitivity stays elevated",
+      "url": "https://www.wsj.com/finance/stocks",
+      "source": "WSJ",
+      "publishedAt": "2026-03-02T17:00:00Z"
+    }
+  ],
+  "nasdaq100": [
+    {
+      "title": "Tech stocks react to US rates repricing ahead of payroll and CPI data",
+      "url": "https://www.reuters.com/markets/us/",
+      "source": "Reuters",
+      "publishedAt": "2026-03-03T12:40:00Z"
+    },
+    {
+      "title": "Nasdaq leadership narrows as long-duration names track Treasury yields",
+      "url": "https://www.bloomberg.com/markets/stocks",
+      "source": "Bloomberg",
+      "publishedAt": "2026-03-01T20:30:00Z"
+    }
+  ],
+  "bitcoin": [
+    {
+      "title": "Bitcoin holds range as ETF flow momentum offsets crypto regulation risk",
+      "url": "https://www.coindesk.com/markets/",
+      "source": "CoinDesk",
+      "publishedAt": "2026-03-03T09:05:00Z"
+    },
+    {
+      "title": "Crypto options imply event risk into US policy and macro data releases",
+      "url": "https://www.theblock.co/",
+      "source": "The Block",
+      "publishedAt": "2026-03-02T07:35:00Z"
+    }
+  ]
+}
