@@ -10,7 +10,7 @@ const HEATMAP_TTL_MS = 45 * 1000;
 const TIMESERIES_TTL_MS = 60 * 1000;
 const TRACK_RECORD_TTL_MS = 5 * 60 * 1000;
 const PORTFOLIO_TTL_MS = 5 * 60 * 1000;
-const NEWS_TTL_MS = 7 * 60 * 1000;
+const NEWS_TTL_MS = 10 * 60 * 1000;
 const MONTE_CARLO_TRACK_RECORD_TTL_MS = 5 * 60 * 1000;
 
 const inflight = new Map<string, Promise<unknown>>();

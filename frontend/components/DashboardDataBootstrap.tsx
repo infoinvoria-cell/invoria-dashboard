@@ -47,7 +47,7 @@ export default function DashboardDataBootstrap() {
     }, 45_000);
     const newsTimer = window.setInterval(() => {
       void ensureGlobalNews(true);
-    }, 7 * 60_000);
+    }, 10 * 60_000);
     const strategyTimer = window.setInterval(() => {
       void Promise.allSettled([ensureTrackRecord(true), ensurePortfolioStrategies(true)]);
     }, 5 * 60_000);

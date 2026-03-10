@@ -14,6 +14,7 @@ import {
   buildYahooSeasonalityPayload,
   buildYahooTimeseriesPayload,
 } from "@/lib/server/yahooFallback";
+import { getFallbackAssetNews, getFallbackGlobalNews } from "@/lib/server/newsFallback";
 import { readTimeseriesSnapshot } from "@/lib/server/timeseriesSnapshots";
 
 export const dynamic = "force-dynamic";
@@ -142,6 +143,10 @@ async function fallbackResponse(path: string[], request: NextRequest): Promise<N
   }
 
   if (normalized.length === 2 && normalized[0] === "news" && normalized[1] === "global") {
+    const live = await getFallbackGlobalNews();
+    if (live?.items?.length) {
+      return NextResponse.json(live);
+    }
     return NextResponse.json({
       updatedAt: assetSnapshot.updatedAt,
       items: newsGlobalFallback,
@@ -149,6 +154,10 @@ async function fallbackResponse(path: string[], request: NextRequest): Promise<N
   }
 
   if (normalized.length === 3 && normalized[0] === "news" && normalized[1] === "asset") {
+    const live = await getFallbackAssetNews(normalized[2]);
+    if (live?.items?.length) {
+      return NextResponse.json(live);
+    }
     return NextResponse.json({
       updatedAt: assetSnapshot.updatedAt,
       items: fallbackNewsForAsset(normalized[2]),
