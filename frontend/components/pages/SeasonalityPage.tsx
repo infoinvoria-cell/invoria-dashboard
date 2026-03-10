@@ -180,7 +180,7 @@ export default function SeasonalityPage() {
   };
 
   return (
-    <main className="ivq-terminal-page xl:h-[calc(100dvh-50px)] xl:min-h-[calc(100dvh-50px)] xl:overflow-hidden">
+    <main className="ivq-terminal-page xl:min-h-[calc(100dvh-50px)]">
       <div className="grid h-full min-h-0 gap-4 xl:grid-cols-[220px_minmax(0,1fr)_336px]">
         <aside className="glass-panel flex min-h-0 flex-col gap-3 !p-3">
           <div className="ivq-input-wrap">

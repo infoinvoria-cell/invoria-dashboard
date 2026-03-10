@@ -73,6 +73,44 @@ def _pick_default_seasonality_asset_id(items: list[dict[str, Any]]) -> str | Non
     return None
 
 
+def _reference_symbol_aliases(symbol: str) -> set[str]:
+    normalized = str(symbol or "").strip().upper()
+    aliases = {normalized}
+
+    if normalized in {"DXY", "DX-Y.NYB", "USD", "USD_INDEX"}:
+        aliases.update({"DXY", "DX-Y.NYB", "USD", "USD_INDEX"})
+    elif normalized in {"GC1!", "XAUUSD", "GC=F", "GOLD"}:
+        aliases.update({"GC1!", "XAUUSD", "GC=F", "GOLD"})
+    elif normalized in {"ZB1!", "^TNX", "US10Y", "US 10Y"}:
+        aliases.update({"ZB1!", "^TNX", "US10Y", "US 10Y"})
+
+    return aliases
+
+
+def _resolve_reference_asset_id(symbol: str, items: list[dict[str, Any]]) -> str | None:
+    aliases = _reference_symbol_aliases(symbol)
+
+    for item in items:
+        item_id = str(item.get("id", "")).strip()
+        candidates = {
+            item_id.upper(),
+            str(item.get("symbol", "")).strip().upper(),
+            str(item.get("tvSource", "")).strip().upper(),
+            str(item.get("name", "")).strip().upper(),
+        }
+        if aliases.intersection(candidates):
+            return item_id or None
+
+    if aliases.intersection({"DXY", "DX-Y.NYB", "USD", "USD_INDEX"}):
+        return "usd_index"
+    if aliases.intersection({"GC1!", "XAUUSD", "GC=F", "GOLD"}):
+        return "gold"
+    if aliases.intersection({"ZB1!", "^TNX", "US10Y", "US 10Y"}):
+        return "us10y"
+
+    return None
+
+
 @router.get("/assets")
 async def api_assets():
     return get_assets_payload()
@@ -226,6 +264,33 @@ async def api_asset_timeseries(
     continuous_mode: str = "backadjusted",
     refresh_bucket: int | None = None,
 ):
+    try:
+        return get_timeseries_payload(
+            asset_id,
+            timeframe=tf,
+            source=source,
+            continuous_mode=continuous_mode,
+            refresh_bucket=refresh_bucket,
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get("/reference/timeseries")
+async def api_reference_timeseries(
+    symbol: str,
+    tf: str = "D",
+    source: str = "dukascopy",
+    continuous_mode: str = "backadjusted",
+    refresh_bucket: int | None = None,
+):
+    assets_payload = get_assets_payload()
+    items = _extract_assets_items(assets_payload)
+    asset_id = _resolve_reference_asset_id(symbol, items)
+
+    if not asset_id:
+        raise HTTPException(status_code=404, detail=f"Reference symbol not mapped: {symbol}")
+
     try:
         return get_timeseries_payload(
             asset_id,

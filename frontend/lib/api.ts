@@ -98,12 +98,13 @@ export function subscribeApiLoading(listener: (state: ApiLoadingSnapshot) => voi
 }
 
 function resolveApiBase(): string {
+  const envBase = (process.env.NEXT_PUBLIC_API_BASE_URL || process.env.API_BASE_URL || "").trim();
+  if (envBase) {
+    return envBase.replace(/\/+$/g, "");
+  }
+
   if (typeof window === "undefined") {
-    const serverBase = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.API_BASE_URL || "";
-    if (serverBase.trim()) {
-      return serverBase.replace(/\/+$/g, "");
-    }
-    return "http://127.0.0.1:8000";
+    return process.env.NODE_ENV === "development" ? "http://127.0.0.1:8000" : "";
   }
   try {
     const qp = new URLSearchParams(window.location.search);
@@ -114,11 +115,13 @@ function resolveApiBase(): string {
   } catch (_err) {
     // no-op
   }
-  const envBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
-  if (envBase.trim()) {
-    return envBase.replace(/\/+$/g, "");
+
+  const host = window.location.hostname.toLowerCase();
+  if (host === "localhost" || host === "127.0.0.1") {
+    return "http://127.0.0.1:8000";
   }
-  return "http://127.0.0.1:8000";
+
+  return "";
 }
 
 export const API_BASE = resolveApiBase();
@@ -148,7 +151,7 @@ async function fetchJson<T>(url: string, ttlMs: number): Promise<T> {
 
 function endpoint(path: string): string {
   const p = path.startsWith("/") ? path : `/${path}`;
-  return `${API_BASE}${p}`;
+  return API_BASE ? `${API_BASE}${p}` : p;
 }
 
 function normalizeCorrTf(value: string): string {

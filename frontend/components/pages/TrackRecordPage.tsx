@@ -266,7 +266,7 @@ export default function TrackRecordPage({ initialModel }: Props) {
   );
 
   return (
-    <main className="ivq-terminal-page relative xl:h-[calc(100dvh-50px)] xl:min-h-[calc(100dvh-50px)] xl:overflow-hidden">
+    <main className="ivq-terminal-page relative xl:min-h-[calc(100dvh-50px)]">
       <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[28px]" aria-hidden="true">
         <div className="absolute inset-0" style={{ background: palette.pageBackground }} />
         <div

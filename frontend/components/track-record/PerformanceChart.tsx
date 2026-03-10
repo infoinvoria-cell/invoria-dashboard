@@ -228,7 +228,7 @@ export default function PerformanceChart({
 
   return (
     <section
-      className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-[24px] border px-4 pb-4 pt-3.5 backdrop-blur-[20px] min-[769px]:px-5 min-[769px]:pb-[18px] min-[769px]:pt-4"
+      className="relative flex h-full min-h-0 flex-col overflow-visible rounded-[24px] border px-4 pb-5 pt-3.5 backdrop-blur-[20px] min-[769px]:px-5 min-[769px]:pb-6 min-[769px]:pt-4"
       style={{
         background: palette.panelBackgroundStrong,
         borderColor: palette.panelBorder,
@@ -423,7 +423,7 @@ export default function PerformanceChart({
         </div>
       </div>
 
-      <div className="relative z-[1] min-h-[320px] flex-1 min-[769px]:min-h-[420px]">
+      <div className="relative z-[1] min-h-[336px] flex-1 overflow-visible pb-4 min-[769px]:min-h-[436px] min-[769px]:pb-5">
         {sortedActiveComparisons.length ? (
           <div className="mb-2 flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.1em]">
             {sortedActiveComparisons.map((comparison) => {
@@ -447,7 +447,7 @@ export default function PerformanceChart({
         ) : null}
         {mounted ? (
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={visibleChartData} margin={{ top: 10, right: activeLines.length > 3 ? 132 : 92, left: 0, bottom: 2 }}>
+            <LineChart data={visibleChartData} margin={{ top: 14, right: activeLines.length > 3 ? 132 : 92, left: 0, bottom: 18 }}>
               <defs>
                 <filter id="track-record-end-glow" x="-40%" y="-40%" width="180%" height="180%">
                   <feGaussianBlur stdDeviation="4" result="blur" />
@@ -461,7 +461,8 @@ export default function PerformanceChart({
               <XAxis
                 dataKey="date"
                 minTickGap={28}
-                tickMargin={14}
+                tickMargin={16}
+                height={34}
                 stroke={palette.grid}
                 tick={{ fill: palette.muted, fontSize: 12 }}
               />
@@ -516,7 +517,7 @@ export default function PerformanceChart({
           <div className="h-full rounded-[20px] border" style={{ borderColor: palette.panelBorder, background: "rgba(7,10,15,0.72)" }} />
         )}
 
-        <div className="pointer-events-none absolute bottom-10 right-4 z-[2] min-[769px]:bottom-12 min-[769px]:right-5">
+        <div className="pointer-events-none absolute bottom-4 right-4 z-[2] min-[769px]:bottom-5 min-[769px]:right-5">
           <img src={palette.watermarkLogo} alt="" className="h-8 w-auto opacity-60 min-[769px]:h-10" />
         </div>
       </div>
