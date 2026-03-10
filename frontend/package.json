@@ -9,7 +9,9 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "snapshot:timeseries": "node scripts/prefetch-timeseries-snapshots.mjs"
+    "snapshot:timeseries": "node scripts/prefetch-timeseries-snapshots.mjs",
+    "snapshot:optimizer": "node scripts/prefetch-optimizer-snapshots.mjs",
+    "snapshot:optimizer-forex": "python scripts/fetch_optimizer_forex_cache.py --symbols EURUSD,GBPUSD,USDJPY,USDCHF,AUDUSD,USDCAD,NZDUSD --start 2012-01-01 --chunk-months 12 --workers 3"
   },
   "dependencies": {
     "@react-three/drei": "^9.108.3",

@@ -57,7 +57,7 @@ const navGroups: Array<{ label: string; items: NavItem[] }> = [
     label: "Engine",
     items: [
       { id: "engine", label: "Engine", icon: BarChart3 },
-      { id: "optimizer", label: "Optimizer", icon: SlidersHorizontal },
+      { id: "optimizer", label: "Optimizer", icon: SlidersHorizontal, href: "/optimizer", activePaths: ["/optimizer"] },
       { id: "montecarlo", label: "Monte Carlo", icon: Blocks, href: "/monte-carlo", activePaths: ["/monte-carlo"] },
     ],
   },
@@ -66,7 +66,7 @@ const navGroups: Array<{ label: string; items: NavItem[] }> = [
     items: [
       { id: "heatmap", label: "Heatmap", icon: LayoutGrid },
       { id: "correlation", label: "Correlation", icon: GitBranch },
-      { id: "regime", label: "Regime", icon: Radar },
+      { id: "regime", label: "Regimes", icon: Radar, href: "/regimes", activePaths: ["/regimes"] },
     ],
   },
 ];
