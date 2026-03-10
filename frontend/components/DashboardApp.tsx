@@ -1688,40 +1688,37 @@ export default function App() {
     return buildMiniSparkPaths(curve);
   }, [seasonality]);
   const currentSeasonPattern = useMemo(() => {
-    const rawCurve = (seasonality?.curve ?? [])
-      .map((point) => ({
-        day: Math.max(1, Math.min(366, Math.round(Number(point.x) + 1))),
-        value: Number(point.y),
-      }))
-      .filter((point) => Number.isFinite(point.value))
-      .sort((left, right) => left.day - right.day);
     const holdDays = Math.max(10, Math.min(20, Math.round(finiteOr(seasonHorizon, 12))));
     const today = currentUtcDayOfYear();
+    const endDay = Math.min(366, today + holdDays);
+    const curve = (seasonality?.curve ?? [])
+      .map((point) => ({
+        x: Number(point.x),
+        y: Number(point.y),
+      }))
+      .filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y))
+      .sort((left, right) => left.x - right.x);
+    const startValue = curve.find((point) => point.x >= 0)?.y ?? 0;
+    const endValue = curve.find((point) => point.x >= holdDays)?.y ?? curve[curve.length - 1]?.y ?? finiteOr(avgReturn, 0);
+    const delta = finiteOr(endValue, 0) - finiteOr(startValue, 0);
+    const direction = delta >= 0 ? "LONG" as const : "SHORT" as const;
 
-    if (!rawCurve.length) {
+    if (!curve.length) {
       return {
-        label: "--",
+        label: `${formatSeasonDay(today)} - ${formatSeasonDay(endDay)}`,
         holdLabel: `${holdDays} Tage`,
-        direction: seasonDirection,
+        direction,
         avgReturnPct: finiteOr(avgReturn, 0),
       };
     }
 
-    let startIndex = rawCurve.findIndex((point) => point.day >= today);
-    if (startIndex < 0) startIndex = Math.max(0, rawCurve.length - 1);
-    const endIndex = Math.min(rawCurve.length - 1, startIndex + holdDays);
-    const startPoint = rawCurve[startIndex];
-    const endPoint = rawCurve[endIndex];
-    const delta = finiteOr(endPoint?.value, 0) - finiteOr(startPoint?.value, 0);
-    const direction = delta >= 0 ? "LONG" as const : "SHORT" as const;
-
     return {
-      label: `${formatSeasonDay(startPoint?.day ?? today)} - ${formatSeasonDay(endPoint?.day ?? Math.min(366, today + holdDays))}`,
-      holdLabel: `${Math.max(1, (endPoint?.day ?? (today + holdDays)) - (startPoint?.day ?? today))} Tage`,
+      label: `${formatSeasonDay(today)} - ${formatSeasonDay(endDay)}`,
+      holdLabel: `${holdDays} Tage`,
       direction,
       avgReturnPct: delta,
     };
-  }, [avgReturn, seasonDirection, seasonHorizon, seasonality]);
+  }, [avgReturn, seasonHorizon, seasonality]);
   const seasonHorizonLabel = `${Math.max(10, Math.min(20, Math.round(finiteOr(seasonHorizon, 12))))} Tage`;
   const avgReturnLabel = `${finiteOr(avgReturn, 0).toFixed(2)}%`;
   const hitRateLabel = `${hitRate.toFixed(0)}%`;

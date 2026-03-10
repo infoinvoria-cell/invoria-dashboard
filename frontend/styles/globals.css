@@ -525,6 +525,28 @@ body.ivq-theme-gold .ivq-theme-btn.is-active {
     max-width: 42px;
   }
 
+  .ivq-sidebar.is-mobile-expanded .ivq-sidebar-group-title,
+  .ivq-sidebar.is-mobile-expanded .ivq-sidebar-item span,
+  .ivq-sidebar.is-mobile-expanded .ivq-sidebar-theme-title,
+  .ivq-sidebar.is-mobile-expanded .ivq-theme-btn-label {
+    display: initial;
+  }
+
+  .ivq-sidebar.is-mobile-expanded .ivq-sidebar-item {
+    justify-content: flex-start;
+    gap: 10px;
+    padding: 0 11px;
+  }
+
+  .ivq-sidebar.is-mobile-expanded .ivq-theme-btn-short {
+    display: none;
+  }
+
+  .ivq-sidebar.is-mobile-expanded .ivq-sidebar-logo-image {
+    width: min(172px, 100%);
+    max-width: 100%;
+  }
+
   .ivq-sidebar.is-mobile-icon .ivq-sidebar-theme-grid {
     grid-template-columns: 1fr;
   }

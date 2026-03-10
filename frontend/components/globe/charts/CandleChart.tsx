@@ -442,8 +442,8 @@ export default function CandleChart({
   const isFutureLikeAsset = /1!$|=F$|USOIL|NG1!|RB1!|ZW1!|ZC1!|ZS1!|ZL1!|KC1!|SB1!|CC1!|CT1!|OJ1!|LE1!|HE1!|ES1!|NQ1!|YM1!|RTY1!|FDAX1!/.test(payloadSymbol);
   const tfPayloadKey = `${timeframe}:${continuousMode}`;
   const primaryAccent = goldThemeEnabled ? themePrimary : "#2962ff";
-  const candleUpColor = goldThemeEnabled ? "#fff4d8" : "#f8fbff";
-  const candleDownColor = "#ff5a68";
+  const candleUpColor = "#f8fbff";
+  const candleDownColor = goldThemeEnabled ? "#d6b24a" : "#4d87fe";
   const activeBtnClass = goldThemeEnabled
     ? "border border-[#d6b24a]/75 bg-[#d6b24a]/24 text-[#fff2cf]"
     : "border border-[#2962ff]/75 bg-[#2962ff]/24 text-[#dce8ff]";

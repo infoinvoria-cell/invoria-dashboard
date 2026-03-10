@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Maximize2, Minimize2 } from "lucide-react";
+import { Maximize2, Minimize2, RotateCw } from "lucide-react";
 
 import { MONTH_LABELS, formatSignedPercent, type PerformanceRow, type TrackRecordTheme } from "@/components/track-record/metrics";
 import { getTrackRecordThemePalette } from "@/components/track-record/theme";
@@ -36,6 +36,7 @@ export default function PerformanceTable({
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [isLandscapeViewport, setIsLandscapeViewport] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isRotated, setIsRotated] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -55,6 +56,7 @@ export default function PerformanceTable({
       setIsLandscapeViewport(landscapeMedia.matches);
       if (!mobile) {
         setIsExpanded(false);
+        setIsRotated(false);
       }
     };
 
@@ -86,6 +88,12 @@ export default function PerformanceTable({
     return () => {
       document.body.style.overflow = previousOverflow;
     };
+  }, [isExpanded]);
+
+  useEffect(() => {
+    if (!isExpanded) {
+      setIsRotated(false);
+    }
   }, [isExpanded]);
 
   const scaleValue = (value: number | null): number | null => {
@@ -189,28 +197,47 @@ export default function PerformanceTable({
             </div>
           ) : <div />}
           {isMobileViewport ? (
-            <button
-              type="button"
-              onClick={() => setIsExpanded((current) => !current)}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-full border transition"
-              style={{
-                borderColor: expanded ? `${palette.accent}88` : palette.panelBorder,
-                background: expanded ? `${palette.accent}14` : "rgba(6,10,16,0.42)",
-                color: expanded ? palette.heading : palette.muted,
-                boxShadow: expanded ? `0 0 10px ${palette.panelGlow}` : "none",
-              }}
-              aria-label={expanded ? "Close table fullscreen" : "Open table fullscreen"}
-              title={expanded ? "Close table fullscreen" : "Open table fullscreen"}
-            >
-              {expanded ? <Minimize2 size={14} strokeWidth={1.8} /> : <Maximize2 size={14} strokeWidth={1.8} />}
-            </button>
+            <div className="flex items-center gap-2">
+              {expanded ? (
+                <button
+                  type="button"
+                  onClick={() => setIsRotated((current) => !current)}
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border transition"
+                  style={{
+                    borderColor: isRotated ? `${palette.accent}88` : palette.panelBorder,
+                    background: isRotated ? `${palette.accent}14` : "rgba(6,10,16,0.42)",
+                    color: isRotated ? palette.heading : palette.muted,
+                    boxShadow: isRotated ? `0 0 10px ${palette.panelGlow}` : "none",
+                  }}
+                  aria-label={isRotated ? "Reset table rotation" : "Rotate table 90 degrees"}
+                  title={isRotated ? "Reset table rotation" : "Rotate table 90 degrees"}
+                >
+                  <RotateCw size={14} strokeWidth={1.8} />
+                </button>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => setIsExpanded((current) => !current)}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-full border transition"
+                style={{
+                  borderColor: expanded ? `${palette.accent}88` : palette.panelBorder,
+                  background: expanded ? `${palette.accent}14` : "rgba(6,10,16,0.42)",
+                  color: expanded ? palette.heading : palette.muted,
+                  boxShadow: expanded ? `0 0 10px ${palette.panelGlow}` : "none",
+                }}
+                aria-label={expanded ? "Close table fullscreen" : "Open table fullscreen"}
+                title={expanded ? "Close table fullscreen" : "Open table fullscreen"}
+              >
+                {expanded ? <Minimize2 size={14} strokeWidth={1.8} /> : <Maximize2 size={14} strokeWidth={1.8} />}
+              </button>
+            </div>
           ) : null}
         </div>
       </div>
 
-      {isMobileViewport && !expanded ? (
+      {isMobileViewport ? (
         <div className="relative z-[1] mb-2 text-[9px] font-medium uppercase tracking-[0.12em]" style={{ color: palette.muted }}>
-          Fullscreen nutzt Querformat automatisch groesser.
+          {expanded ? "Rotate dreht die Tabelle 90 Grad fuer die volle Handybreite." : "Fullscreen nutzt Querformat automatisch groesser."}
         </div>
       ) : null}
 
@@ -318,7 +345,21 @@ export default function PerformanceTable({
             paddingBottom: "max(12px, env(safe-area-inset-bottom))",
           }}
         >
-          {renderTableCard(true)}
+          <div
+            className={`mx-auto ${isRotated ? "flex min-h-[calc(100dvh-24px)] items-center justify-center" : "max-w-[min(100%,1180px)]"}`}
+            style={
+              isRotated
+                ? {
+                    width: "calc(100dvh - 24px)",
+                    maxWidth: "calc(100dvh - 24px)",
+                    transform: "rotate(90deg)",
+                    transformOrigin: "center center",
+                  }
+                : undefined
+            }
+          >
+            {renderTableCard(true)}
+          </div>
         </div>
       ) : null}
     </>

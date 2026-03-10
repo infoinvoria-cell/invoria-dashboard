@@ -294,6 +294,22 @@ export default function TrackRecordPage({ initialModel }: Props) {
               onRefreshData={handleRefreshComparisons}
               isRefreshing={isRefreshingComparisons}
             />
+            <div className="flex justify-center px-2">
+              <div
+                className="inline-flex items-center rounded-full border px-3 py-1 text-[9px] font-semibold uppercase tracking-[0.22em] shadow-[0_10px_24px_rgba(0,0,0,0.18)] min-[769px]:text-[10px]"
+                style={{
+                  borderColor: theme === "dark" ? "rgba(214,195,143,0.32)" : "rgba(77,135,254,0.28)",
+                  background:
+                    theme === "dark"
+                      ? "linear-gradient(180deg, rgba(16,14,10,0.90), rgba(9,9,10,0.76))"
+                      : "linear-gradient(180deg, rgba(13,24,44,0.90), rgba(8,18,36,0.78))",
+                  color: theme === "dark" ? "#f5e7bd" : "#dce8ff",
+                  boxShadow: theme === "dark" ? "0 0 18px rgba(214,195,143,0.10)" : "0 0 18px rgba(77,135,254,0.12)",
+                }}
+              >
+                Third Party Verified Track Record
+              </div>
+            </div>
             <PerformanceTable
               rows={model.performanceRows}
               totalCumulativeReturn={model.cumulativeReturn}
