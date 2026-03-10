@@ -18,6 +18,7 @@ import {
 } from "lightweight-charts";
 
 import { GlobeApi } from "../../../lib/api";
+import { sanitizeOhlcvSeries } from "../../../lib/ohlcv";
 import { getSeasonDirection, normalizedSeasonalityCurve, seasonTone } from "../../../lib/seasonality";
 import type { EvaluationResponse, SeasonalityResponse, TimeseriesResponse } from "../../../types";
 
@@ -441,7 +442,8 @@ export default function CandleChart({
   const isFutureLikeAsset = /1!$|=F$|USOIL|NG1!|RB1!|ZW1!|ZC1!|ZS1!|ZL1!|KC1!|SB1!|CC1!|CT1!|OJ1!|LE1!|HE1!|ES1!|NQ1!|YM1!|RTY1!|FDAX1!/.test(payloadSymbol);
   const tfPayloadKey = `${timeframe}:${continuousMode}`;
   const primaryAccent = goldThemeEnabled ? themePrimary : "#2962ff";
-  const bearishColor = goldThemeEnabled ? themePrimary : "#4d87fe";
+  const candleUpColor = goldThemeEnabled ? "#fff4d8" : "#f8fbff";
+  const candleDownColor = "#ff5a68";
   const activeBtnClass = goldThemeEnabled
     ? "border border-[#d6b24a]/75 bg-[#d6b24a]/24 text-[#fff2cf]"
     : "border border-[#2962ff]/75 bg-[#2962ff]/24 text-[#dce8ff]";
@@ -529,7 +531,7 @@ export default function CandleChart({
         borderColor: "rgba(109,132,160,0.35)",
         secondsVisible: false,
         rightOffset: 24,
-        barSpacing: 7.2,
+        barSpacing: 8.4,
         fixLeftEdge: false,
       },
       grid: {
@@ -568,13 +570,13 @@ export default function CandleChart({
     });
 
     const candles = chart.addSeries(CandlestickSeries, {
-      upColor: "#ffffff",
-      downColor: bearishColor,
-      wickUpColor: "#ffffff",
-      wickDownColor: bearishColor,
-      borderUpColor: "#ffffff",
-      borderDownColor: bearishColor,
-      borderVisible: true,
+      upColor: candleUpColor,
+      downColor: candleDownColor,
+      wickUpColor: candleUpColor,
+      wickDownColor: candleDownColor,
+      borderUpColor: candleUpColor,
+      borderDownColor: candleDownColor,
+      borderVisible: false,
     });
     const projection = chart.addSeries(LineSeries, {
       color: "#39ff40",
@@ -627,7 +629,7 @@ export default function CandleChart({
       signalMarkersRef.current = null;
       setZones([]);
     };
-  }, [bearishColor, onTimeRangeChange]);
+  }, [candleDownColor, candleUpColor, onTimeRangeChange]);
 
   useEffect(() => {
     const series = seriesRef.current;
@@ -647,7 +649,7 @@ export default function CandleChart({
       loopAnimFrameRef.current = null;
     }
 
-    const fullBars = (activePayload?.ohlcv ?? [])
+    const fullBars = sanitizeOhlcvSeries(activePayload?.ohlcv ?? [])
       .slice(-500)
       .map((row) => {
         const open = Number(row.open);

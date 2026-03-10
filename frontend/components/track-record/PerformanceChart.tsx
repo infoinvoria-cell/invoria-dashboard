@@ -467,24 +467,14 @@ export default function PerformanceChart({
             })}
           </div>
         ) : null}
-        <div
-          className="relative h-full overflow-hidden rounded-[24px] border px-1.5 pb-2 pt-2 min-[769px]:rounded-[26px] min-[769px]:px-3 min-[769px]:pb-3 min-[769px]:pt-3"
-          style={{
-            borderColor: palette.panelBorder,
-            background:
-              theme === "dark"
-                ? "linear-gradient(180deg, rgba(8,10,14,0.88) 0%, rgba(5,7,10,0.78) 100%)"
-                : "linear-gradient(180deg, rgba(5,12,22,0.86) 0%, rgba(4,8,16,0.78) 100%)",
-            boxShadow: `inset 0 1px 0 ${theme === "dark" ? "rgba(255,243,212,0.08)" : "rgba(218,232,255,0.08)"}`,
-          }}
-        >
+        <div className="relative h-full overflow-hidden rounded-[20px] px-0.5 pb-1 pt-1 min-[769px]:rounded-[24px] min-[769px]:px-1 min-[769px]:pb-2 min-[769px]:pt-1.5">
           <div
             className="pointer-events-none absolute inset-0"
             style={{
               background:
                 theme === "dark"
-                  ? "radial-gradient(520px 240px at 8% 10%, rgba(214,195,143,0.15), transparent 58%), radial-gradient(360px 180px at 88% 92%, rgba(214,195,143,0.10), transparent 62%)"
-                  : "radial-gradient(520px 240px at 8% 10%, rgba(77,135,254,0.15), transparent 58%), radial-gradient(360px 180px at 88% 92%, rgba(77,135,254,0.10), transparent 62%)",
+                  ? "radial-gradient(520px 240px at 8% 10%, rgba(214,195,143,0.12), transparent 58%), radial-gradient(360px 180px at 88% 92%, rgba(214,195,143,0.08), transparent 62%)"
+                  : "radial-gradient(520px 240px at 8% 10%, rgba(77,135,254,0.12), transparent 58%), radial-gradient(360px 180px at 88% 92%, rgba(77,135,254,0.08), transparent 62%)",
             }}
           />
           {mounted ? (
@@ -567,8 +557,8 @@ export default function PerformanceChart({
             <div className="h-full rounded-[20px] border" style={{ borderColor: palette.panelBorder, background: "rgba(7,10,15,0.72)" }} />
           )}
 
-          <div className="pointer-events-none absolute bottom-16 right-4 z-[2] min-[769px]:bottom-14 min-[769px]:right-5">
-            <img src={palette.watermarkLogo} alt="" className="h-6 w-auto opacity-30 min-[769px]:h-10 min-[769px]:opacity-35" />
+          <div className="pointer-events-none absolute bottom-20 right-3 z-[2] min-[769px]:bottom-18 min-[769px]:right-5">
+            <img src={palette.watermarkLogo} alt="" className="h-5 w-auto opacity-28 min-[769px]:h-9 min-[769px]:opacity-32" />
           </div>
         </div>
       </div>

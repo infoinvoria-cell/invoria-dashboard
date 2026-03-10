@@ -34,30 +34,48 @@ export default function PerformanceTable({
   const totalBackground = isBlueTheme ? "rgba(0,0,0,0)" : "rgba(7,10,15,0.8)";
   const displayMultiplier = Math.max(1, Number(activeMultiplier ?? 1));
   const [isMobileViewport, setIsMobileViewport] = useState(false);
+  const [isLandscapeViewport, setIsLandscapeViewport] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const media = window.matchMedia("(max-width: 768px)");
-    const legacyMedia = media as MediaQueryList & {
+    const mobileMedia = window.matchMedia("(max-width: 768px)");
+    const landscapeMedia = window.matchMedia("(orientation: landscape)");
+    const legacyMobileMedia = mobileMedia as MediaQueryList & {
       addListener?: (listener: (event: MediaQueryListEvent) => void) => void;
       removeListener?: (listener: (event: MediaQueryListEvent) => void) => void;
     };
-    const apply = (matches: boolean) => {
-      setIsMobileViewport(matches);
-      if (!matches) {
+    const legacyLandscapeMedia = landscapeMedia as MediaQueryList & {
+      addListener?: (listener: (event: MediaQueryListEvent) => void) => void;
+      removeListener?: (listener: (event: MediaQueryListEvent) => void) => void;
+    };
+    const syncViewport = () => {
+      const mobile = mobileMedia.matches;
+      setIsMobileViewport(mobile);
+      setIsLandscapeViewport(landscapeMedia.matches);
+      if (!mobile) {
         setIsExpanded(false);
       }
     };
 
-    apply(media.matches);
-    const onChange = (event: MediaQueryListEvent) => apply(event.matches);
-    if ("addEventListener" in media) {
-      media.addEventListener("change", onChange);
-      return () => media.removeEventListener("change", onChange);
+    syncViewport();
+    const onMobileChange = () => syncViewport();
+    const onLandscapeChange = () => syncViewport();
+
+    if ("addEventListener" in mobileMedia) {
+      mobileMedia.addEventListener("change", onMobileChange);
+      landscapeMedia.addEventListener("change", onLandscapeChange);
+      return () => {
+        mobileMedia.removeEventListener("change", onMobileChange);
+        landscapeMedia.removeEventListener("change", onLandscapeChange);
+      };
     }
-    legacyMedia.addListener?.(onChange);
-    return () => legacyMedia.removeListener?.(onChange);
+    legacyMobileMedia.addListener?.(onMobileChange);
+    legacyLandscapeMedia.addListener?.(onLandscapeChange);
+    return () => {
+      legacyMobileMedia.removeListener?.(onMobileChange);
+      legacyLandscapeMedia.removeListener?.(onLandscapeChange);
+    };
   }, []);
 
   useEffect(() => {
@@ -87,6 +105,37 @@ export default function PerformanceTable({
     const scaled = scaleValue(value) ?? 0;
     return isMobileViewport ? formatCompactSignedPercent(scaled) : formatSignedPercent(scaled);
   };
+
+  const mobileDense = isMobileViewport && !isExpanded && !isLandscapeViewport;
+  const compactMode = isMobileViewport && !isLandscapeViewport;
+  const yearColClass = mobileDense ? "w-[12%]" : compactMode ? "w-[10%]" : "w-[56px] min-[769px]:w-[64px]";
+  const monthColClass = mobileDense ? "w-[5.75%]" : compactMode ? "w-[5.95%]" : "w-[42px] min-[769px]:w-auto";
+  const totalColClass = mobileDense ? "w-[19%]" : compactMode ? "w-[18%]" : "w-[92px] min-[769px]:w-[96px]";
+  const monthHeaderClass = mobileDense
+    ? "border-y px-0 py-2 text-center text-[5px] uppercase tracking-[0.04em]"
+    : compactMode
+      ? "border-y px-0 py-2 text-center text-[6px] uppercase tracking-[0.06em]"
+      : "border-y px-0.5 py-2.5 text-center text-[6.5px] uppercase tracking-[0.1em] min-[769px]:px-1 min-[769px]:text-[8px]";
+  const monthValueClass = mobileDense
+    ? "border-y px-0 py-3 text-center text-[5.3px] font-semibold leading-none whitespace-nowrap"
+    : compactMode
+      ? "border-y px-0 py-3 text-center text-[6.3px] font-semibold leading-none whitespace-nowrap"
+      : "border-y px-[2px] py-3 text-center text-[7px] font-semibold whitespace-nowrap min-[769px]:px-1 min-[769px]:text-[11px]";
+  const yearCellClass = mobileDense
+    ? "rounded-l-2xl border-y border-l px-1 py-3 text-[8px] font-semibold"
+    : compactMode
+      ? "rounded-l-2xl border-y border-l px-1.5 py-3 text-[9px] font-semibold"
+      : "rounded-l-2xl border-y border-l px-1.5 py-3 text-[10px] font-semibold min-[769px]:px-2 min-[769px]:text-[12px]";
+  const totalCellClass = mobileDense
+    ? "rounded-r-2xl border-y border-r px-0.5 py-3 text-center text-[7px] font-semibold leading-none whitespace-nowrap"
+    : compactMode
+      ? "rounded-r-2xl border-y border-r px-1 py-3 text-center text-[8px] font-semibold leading-none whitespace-nowrap"
+      : "rounded-r-2xl border-y border-r px-1 py-3 text-center text-[10px] font-semibold whitespace-nowrap min-[769px]:px-1.5 min-[769px]:text-[11px]";
+  const totalRowValueClass = mobileDense
+    ? "whitespace-nowrap text-[15px] font-semibold"
+    : compactMode
+      ? "whitespace-nowrap text-[17px] font-semibold"
+      : "whitespace-nowrap text-[19px] font-semibold min-[769px]:text-[22px] xl:text-[24px]";
 
   const renderTableCard = (expanded = false) => (
     <section
@@ -161,23 +210,23 @@ export default function PerformanceTable({
 
       {isMobileViewport && !expanded ? (
         <div className="relative z-[1] mb-2 text-[9px] font-medium uppercase tracking-[0.12em]" style={{ color: palette.muted }}>
-          Swipe table horizontally or open fullscreen for landscape view.
+          Fullscreen nutzt Querformat automatisch groesser.
         </div>
       ) : null}
 
-      <div className="relative z-[1] overflow-x-auto overscroll-x-contain pb-1">
-        <table className="min-w-[620px] w-full table-fixed border-separate border-spacing-y-1.5 text-left tabular-nums min-[769px]:min-w-0 min-[769px]:text-[10px] xl:text-[11px]">
+      <div className="relative z-[1] overflow-hidden pb-1">
+        <table className="w-full table-fixed border-separate border-spacing-y-1.5 text-left tabular-nums min-[769px]:text-[10px] xl:text-[11px]">
           <colgroup>
-            <col className="w-[56px] min-[769px]:w-[64px]" />
+            <col className={yearColClass} />
             {MONTH_LABELS.map((month) => (
-              <col key={month} className="w-[42px] min-[769px]:w-auto" />
+              <col key={month} className={monthColClass} />
             ))}
-            <col className="w-[92px] min-[769px]:w-[96px]" />
+            <col className={totalColClass} />
           </colgroup>
           <thead>
             <tr>
               <th
-                className="rounded-l-2xl border-y border-l px-1.5 py-2.5 text-[7px] uppercase tracking-[0.14em] min-[769px]:px-2 min-[769px]:text-[8px]"
+                className={`${mobileDense ? "rounded-l-2xl border-y border-l px-1 py-2 text-[6px] uppercase tracking-[0.08em]" : compactMode ? "rounded-l-2xl border-y border-l px-1.5 py-2 text-[6.5px] uppercase tracking-[0.1em]" : "rounded-l-2xl border-y border-l px-1.5 py-2.5 text-[7px] uppercase tracking-[0.14em] min-[769px]:px-2 min-[769px]:text-[8px]"}`}
                 style={{ borderColor: palette.panelBorder, background: headerBackground, color: palette.muted }}
               >
                 Year
@@ -185,14 +234,14 @@ export default function PerformanceTable({
               {MONTH_LABELS.map((month) => (
                 <th
                   key={month}
-                  className="border-y px-0.5 py-2.5 text-center text-[6.5px] uppercase tracking-[0.1em] min-[769px]:px-1 min-[769px]:text-[8px]"
+                  className={monthHeaderClass}
                   style={{ borderColor: palette.panelBorder, background: headerBackground, color: palette.muted }}
                 >
                   {month}
                 </th>
               ))}
               <th
-                className="rounded-r-2xl border-y border-r px-1 py-2.5 text-center text-[7px] uppercase tracking-[0.12em] min-[769px]:px-1.5 min-[769px]:text-[8px]"
+                className={`${mobileDense ? "rounded-r-2xl border-y border-r px-0.5 py-2 text-center text-[6px] uppercase tracking-[0.08em]" : compactMode ? "rounded-r-2xl border-y border-r px-1 py-2 text-center text-[6.5px] uppercase tracking-[0.1em]" : "rounded-r-2xl border-y border-r px-1 py-2.5 text-center text-[7px] uppercase tracking-[0.12em] min-[769px]:px-1.5 min-[769px]:text-[8px]"}`}
                 style={{ borderColor: palette.panelBorder, background: headerBackground, color: palette.muted }}
               >
                 Total
@@ -204,7 +253,7 @@ export default function PerformanceTable({
             {rows.map((row) => (
               <tr key={row.year}>
                 <td
-                  className="rounded-l-2xl border-y border-l px-1.5 py-3 text-[10px] font-semibold min-[769px]:px-2 min-[769px]:text-[12px]"
+                  className={yearCellClass}
                   style={{ borderColor: palette.panelBorder, background: rowBackground, color: palette.heading }}
                 >
                   {row.year}
@@ -214,7 +263,7 @@ export default function PerformanceTable({
                   return (
                     <td
                       key={`${row.year}-${month}`}
-                      className="border-y px-[2px] py-3 text-center text-[7px] font-semibold whitespace-nowrap min-[769px]:px-1 min-[769px]:text-[11px]"
+                      className={monthValueClass}
                       style={{ borderColor: palette.panelBorder, background: rowBackground, ...toneStyle(scaleValue(value)) }}
                     >
                       {monthCellLabel(value)}
@@ -222,7 +271,7 @@ export default function PerformanceTable({
                   );
                 })}
                 <td
-                  className="rounded-r-2xl border-y border-r px-1 py-3 text-center text-[10px] font-semibold whitespace-nowrap min-[769px]:px-1.5 min-[769px]:text-[11px]"
+                  className={totalCellClass}
                   style={{ borderColor: palette.panelBorder, background: rowBackground, ...toneStyle(scaleValue(row.total)) }}
                 >
                   {row.total == null ? "--" : formatSignedPercent(scaleValue(row.total) ?? 0)}
@@ -231,23 +280,23 @@ export default function PerformanceTable({
             ))}
             <tr>
               <td
-                className="rounded-l-2xl border-y border-l px-1.5 py-3 font-semibold uppercase tracking-[0.06em] min-[769px]:px-2"
+                className={`${mobileDense ? "rounded-l-2xl border-y border-l px-1 py-3 text-[8px] font-semibold uppercase tracking-[0.04em]" : compactMode ? "rounded-l-2xl border-y border-l px-1.5 py-3 text-[9px] font-semibold uppercase tracking-[0.05em]" : "rounded-l-2xl border-y border-l px-1.5 py-3 font-semibold uppercase tracking-[0.06em] min-[769px]:px-2"}`}
                 style={{ borderColor: palette.panelBorder, background: totalBackground, color: palette.heading }}
               >
                 Total Return
               </td>
               <td
-                colSpan={11}
-                className="border-y px-1 py-3 text-[7px] uppercase tracking-[0.06em] min-[769px]:px-1.5 min-[769px]:text-[8px] xl:text-[9px]"
+                colSpan={12}
+                className={`${mobileDense ? "border-y px-0.5 py-3 text-[5.5px] uppercase tracking-[0.03em]" : compactMode ? "border-y px-1 py-3 text-[6.5px] uppercase tracking-[0.04em]" : "border-y px-1 py-3 text-[7px] uppercase tracking-[0.06em] min-[769px]:px-1.5 min-[769px]:text-[8px] xl:text-[9px]"}`}
                 style={{ borderColor: palette.panelBorder, background: totalBackground, color: palette.muted }}
               >
                 Cumulative Return - {displayMultiplier}x
               </td>
               <td
-                className="rounded-r-2xl border-y border-r py-3 pl-2 pr-5 text-right font-semibold leading-none min-[769px]:pl-3 min-[769px]:pr-7"
+                className={`${mobileDense ? "rounded-r-2xl border-y border-r py-3 pl-1 pr-3 text-right font-semibold leading-none" : compactMode ? "rounded-r-2xl border-y border-r py-3 pl-2 pr-4 text-right font-semibold leading-none" : "rounded-r-2xl border-y border-r py-3 pl-2 pr-5 text-right font-semibold leading-none min-[769px]:pl-3 min-[769px]:pr-7"}`}
                 style={{ borderColor: palette.panelBorder, background: totalBackground, color: totalRowTone }}
               >
-                <span className="whitespace-nowrap text-[19px] font-semibold min-[769px]:text-[22px] xl:text-[24px]">
+                <span className={totalRowValueClass}>
                   {formatSignedPercent(totalCumulativeReturn * displayMultiplier)}
                 </span>
               </td>

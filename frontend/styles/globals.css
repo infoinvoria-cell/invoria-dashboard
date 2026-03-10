@@ -411,30 +411,39 @@ body.ivq-theme-gold .ivq-theme-btn.is-active {
 
   .ivq-mobile-sidebar-toggle {
     position: fixed;
-    left: 14px;
-    top: 14px;
+    right: 14px;
+    left: auto;
+    top: 12px;
     z-index: 75;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 42px;
-    height: 42px;
-    border-radius: 14px;
-    border: 1px solid rgba(120, 160, 255, 0.26);
-    background: rgba(7, 18, 38, 0.82);
+    width: 34px;
+    height: 34px;
+    border-radius: 12px;
+    border: 1px solid rgba(120, 160, 255, 0.16);
+    background: rgba(7, 18, 38, 0.34);
     color: #e8f0ff;
     box-shadow:
-      0 14px 28px rgba(0, 0, 0, 0.34),
-      inset 0 1px 0 rgba(190, 216, 255, 0.08);
+      0 10px 24px rgba(0, 0, 0, 0.22),
+      inset 0 1px 0 rgba(190, 216, 255, 0.04);
     backdrop-filter: blur(18px) saturate(118%);
     -webkit-backdrop-filter: blur(18px) saturate(118%);
-    transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1), border-color 160ms ease, background 160ms ease;
+    opacity: 0.72;
+    transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1), border-color 160ms ease, background 160ms ease, opacity 160ms ease;
   }
 
   .ivq-mobile-sidebar-toggle:hover {
     transform: translateY(-1px);
-    border-color: rgba(120, 160, 255, 0.42);
-    background: rgba(11, 24, 48, 0.9);
+    border-color: rgba(120, 160, 255, 0.26);
+    background: rgba(11, 24, 48, 0.46);
+    opacity: 0.88;
+  }
+
+  body.ivq-mobile-sidebar-expanded .ivq-mobile-sidebar-toggle {
+    opacity: 0.38;
+    background: rgba(7, 18, 38, 0.22);
+    border-color: rgba(120, 160, 255, 0.12);
   }
 
   .ivq-mobile-sidebar-backdrop {
@@ -525,16 +534,23 @@ body.ivq-theme-gold .ivq-theme-btn.is-active {
   }
 
   body.ivq-theme-gold .ivq-mobile-sidebar-toggle {
-    border-color: rgba(214, 178, 74, 0.28);
-    background: rgba(15, 11, 8, 0.86);
+    border-color: rgba(214, 178, 74, 0.18);
+    background: rgba(15, 11, 8, 0.34);
     color: #fff0cb;
     box-shadow:
-      0 14px 28px rgba(0, 0, 0, 0.34),
-      inset 0 1px 0 rgba(255, 244, 214, 0.07);
+      0 10px 24px rgba(0, 0, 0, 0.22),
+      inset 0 1px 0 rgba(255, 244, 214, 0.04);
   }
 
   body.ivq-theme-gold .ivq-mobile-sidebar-toggle:hover {
-    border-color: rgba(214, 178, 74, 0.42);
-    background: rgba(20, 15, 10, 0.92);
+    border-color: rgba(214, 178, 74, 0.28);
+    background: rgba(20, 15, 10, 0.46);
+  }
+
+  body.ivq-theme-gold.ivq-mobile-sidebar-expanded .ivq-mobile-sidebar-toggle,
+  body.ivq-theme-gold.ivq-mobile-sidebar-expanded .ivq-mobile-sidebar-toggle:hover {
+    opacity: 0.34;
+    background: rgba(15, 11, 8, 0.22);
+    border-color: rgba(214, 178, 74, 0.12);
   }
 }
