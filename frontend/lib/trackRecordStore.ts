@@ -54,6 +54,7 @@ function tradeKey(
 }
 
 export async function loadHistoricalTrackRecordTrades(): Promise<TrackRecordTradeInput[]> {
+  console.log("TRACK RECORD CSV PATH:", HISTORICAL_DATASET_PATH);
   try {
     const content = await fs.readFile(HISTORICAL_DATASET_PATH, "utf8");
 
