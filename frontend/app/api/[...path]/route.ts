@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import assetSnapshot from "@/data/asset-snapshot.json";
 import newsAssetFallback from "@/data/news-asset-fallback.json";
 import newsGlobalFallback from "@/data/news-global-fallback.json";
+import trackRecordComparisonTimeseries from "@/data/track-record-comparison-timeseries.json";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +28,14 @@ function fallbackNewsForAsset(assetId: string) {
   return newsAssetFallback[key as keyof typeof newsAssetFallback] ?? newsGlobalFallback;
 }
 
+function fallbackComparisonTimeseries(assetId: string) {
+  const key = String(assetId || "").trim().toLowerCase();
+  if (key === "sp500" || key === "dax40") {
+    return trackRecordComparisonTimeseries[key as keyof typeof trackRecordComparisonTimeseries] ?? null;
+  }
+  return null;
+}
+
 function fallbackResponse(path: string[]): NextResponse {
   const normalized = path.map((segment) => String(segment || "").trim().toLowerCase());
 
@@ -46,6 +55,13 @@ function fallbackResponse(path: string[]): NextResponse {
       updatedAt: assetSnapshot.updatedAt,
       items: fallbackNewsForAsset(normalized[2]),
     });
+  }
+
+  if (normalized.length === 3 && normalized[0] === "asset" && normalized[2] === "timeseries") {
+    const payload = fallbackComparisonTimeseries(normalized[1]);
+    if (payload) {
+      return NextResponse.json(payload);
+    }
   }
 
   return NextResponse.json(
