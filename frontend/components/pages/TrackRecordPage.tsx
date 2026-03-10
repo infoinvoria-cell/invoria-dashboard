@@ -10,7 +10,6 @@ import PerformanceTable from "@/components/track-record/PerformanceTable";
 import type { ChartViewMode, ComparisonAssetId, ComparisonSeries, TrackRecordModel, TrackRecordTheme } from "@/components/track-record/metrics";
 import {
   buildComparisonSeriesFromCloses,
-  buildFallbackComparisonSeries,
   formatRatio,
   formatSignedPercent,
   getMetricRating,
@@ -24,6 +23,9 @@ import { GlobeApi } from "@/lib/api";
 type Props = {
   initialModel: TrackRecordModel;
 };
+
+const COMPARISON_CACHE_KEY = "track-record:comparisons:v2";
+const COMPARISON_SOURCE = "yahoo";
 
 function formatPercent(value: number): string {
   return `${(value * 100).toFixed(2)}%`;
@@ -48,7 +50,7 @@ export default function TrackRecordPage({ initialModel }: Props) {
   const [tableMultiplier, setTableMultiplier] = useState<number>(persistedState.tableMultiplier ?? persistedState.activeMultipliers?.[0] ?? 1);
   const [theme, setTheme] = useState<TrackRecordTheme>("dark");
   const [comparisonSeries, setComparisonSeries] = useState<ComparisonSeries[]>(
-    () => dashboardStore.getDataCache<ComparisonSeries[]>("track-record:comparisons") ?? [],
+    () => dashboardStore.getDataCache<ComparisonSeries[]>(COMPARISON_CACHE_KEY) ?? [],
   );
   const [isRefreshingComparisons, setIsRefreshingComparisons] = useState(false);
   const palette = getTrackRecordThemePalette(theme);
@@ -108,10 +110,10 @@ export default function TrackRecordPage({ initialModel }: Props) {
       const results = await Promise.all(
         TRACK_RECORD_COMPARISON_ASSETS.map(async (asset) => {
           try {
-            const response = await GlobeApi.getTimeseries(asset.id, "D", "tradingview");
-            return buildComparisonSeriesFromCloses(model.strategyData, response.ohlcv, asset.id);
+            const response = await GlobeApi.getTimeseries(asset.id, "D", COMPARISON_SOURCE, "regular");
+            return buildComparisonSeriesFromCloses(model.chartData, response.ohlcv, asset.id);
           } catch {
-            return buildFallbackComparisonSeries(model.chartData, asset.id);
+            return null;
           }
         }),
       );
@@ -119,7 +121,7 @@ export default function TrackRecordPage({ initialModel }: Props) {
       if (cancelled) return;
       const next = results.filter((item): item is ComparisonSeries => item != null);
       setComparisonSeries(next);
-      dashboardStore.setDataCache("track-record:comparisons", next);
+      dashboardStore.setDataCache(COMPARISON_CACHE_KEY, next);
     };
 
     void loadComparisons();
@@ -127,7 +129,7 @@ export default function TrackRecordPage({ initialModel }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [comparisonSeries.length, dashboardStore, model.chartData, model.strategyData]);
+  }, [comparisonSeries.length, dashboardStore, model.chartData]);
 
   useEffect(() => {
     dashboardStore.setPageState("track-record", {
@@ -140,22 +142,22 @@ export default function TrackRecordPage({ initialModel }: Props) {
 
   const handleRefreshComparisons = async () => {
     setIsRefreshingComparisons(true);
-    dashboardStore.clearDataCache("track-record:comparisons");
+    dashboardStore.clearDataCache(COMPARISON_CACHE_KEY);
     GlobeApi.clearCache((key) => key.includes("/timeseries") && (key.includes("sp500") || key.includes("dax40")));
     try {
       const results = await Promise.all(
         TRACK_RECORD_COMPARISON_ASSETS.map(async (asset) => {
           try {
-            const response = await GlobeApi.getTimeseries(asset.id, "D", "tradingview", "backadjusted", Math.floor(Date.now() / 60_000));
-            return buildComparisonSeriesFromCloses(model.strategyData, response.ohlcv, asset.id);
+            const response = await GlobeApi.getTimeseries(asset.id, "D", COMPARISON_SOURCE, "regular", Math.floor(Date.now() / 60_000));
+            return buildComparisonSeriesFromCloses(model.chartData, response.ohlcv, asset.id);
           } catch {
-            return buildFallbackComparisonSeries(model.chartData, asset.id);
+            return null;
           }
         }),
       );
       const next = results.filter((item): item is ComparisonSeries => item != null);
       setComparisonSeries(next);
-      dashboardStore.setDataCache("track-record:comparisons", next);
+      dashboardStore.setDataCache(COMPARISON_CACHE_KEY, next);
     } finally {
       setIsRefreshingComparisons(false);
     }

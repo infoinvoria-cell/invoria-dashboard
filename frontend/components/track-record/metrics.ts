@@ -269,21 +269,56 @@ function getCumulativeReturnSeries(strategyData: StrategyDataPoint[]): number[] 
   return strategyData.map((point) => point.equity / START_EQUITY - 1);
 }
 
+function startOfUtcDayTimestamp(value: string): number {
+  const date = new Date(value);
+  return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+}
+
+function buildTimelineDates(strategyData: StrategyDataPoint[]): string[] {
+  if (strategyData.length === 0) return [];
+
+  const tradeDays = strategyData.map((point) => startOfUtcDayTimestamp(point.date));
+  const firstDay = Math.min(...tradeDays);
+  const lastDay = Math.max(...tradeDays);
+  const timeline = new Set<number>(tradeDays);
+
+  for (let cursor = firstDay; cursor <= lastDay; cursor += 86_400_000) {
+    const day = new Date(cursor).getUTCDay();
+    if (day === 0 || day === 6) continue;
+    timeline.add(cursor);
+  }
+
+  return Array.from(timeline)
+    .sort((left, right) => left - right)
+    .map((timestamp) => new Date(timestamp).toISOString());
+}
+
 function buildChartData(strategyData: StrategyDataPoint[]): ChartPoint[] {
   const cumulativeReturns = getCumulativeReturnSeries(strategyData);
+  const timelineDates = buildTimelineDates(strategyData);
+  const cumulativeByTradeDay = new Map<number, number>();
 
-  return strategyData.map((point, index) => {
-    const date = new Date(point.date);
-    const baseReturnPercent = cumulativeReturns[index] * 100;
+  strategyData.forEach((point, index) => {
+    cumulativeByTradeDay.set(startOfUtcDayTimestamp(point.date), cumulativeReturns[index] * 100);
+  });
+
+  let latestReturnPercent = 0;
+
+  return timelineDates.map((timelineDate) => {
+    const date = new Date(timelineDate);
+    const dailyReturnPercent = cumulativeByTradeDay.get(startOfUtcDayTimestamp(timelineDate));
+    if (dailyReturnPercent != null) {
+      latestReturnPercent = dailyReturnPercent;
+    }
 
     return {
       date: date.toLocaleDateString("en-US", { month: "short", year: "2-digit" }),
-      fullDate: point.date,
-      curve1x: round(baseReturnPercent, 2),
-      curve2x: round(baseReturnPercent * 2, 2),
-      curve3x: round(baseReturnPercent * 3, 2),
-      curve4x: round(baseReturnPercent * 4, 2),
-      curve5x: round(baseReturnPercent * 5, 2),
+      fullDate: timelineDate,
+      curve1x: round(latestReturnPercent, 2),
+      curve2x: round(latestReturnPercent * 2, 2),
+      curve3x: round(latestReturnPercent * 3, 2),
+      curve4x: round(latestReturnPercent * 4, 2),
+      curve5x: round(latestReturnPercent * 5, 2),
       compareSp500: null,
       compareDax40: null,
     };
@@ -476,11 +511,11 @@ export function mergeComparisonSeriesIntoChartData(
 }
 
 export function buildComparisonSeriesFromCloses(
-  strategyData: StrategyDataPoint[],
+  chartData: ChartPoint[],
   closes: Array<{ t: string; close: number }>,
   assetId: ComparisonAssetId,
 ): ComparisonSeries | null {
-  if (strategyData.length === 0 || closes.length === 0) return null;
+  if (chartData.length === 0 || closes.length === 0) return null;
 
   const definition = TRACK_RECORD_COMPARISON_ASSETS.find((asset) => asset.id === assetId);
   if (!definition) return null;
@@ -492,7 +527,7 @@ export function buildComparisonSeriesFromCloses(
 
   if (normalizedCloses.length === 0) return null;
 
-  const strategyTimes = strategyData.map((point) => new Date(point.date).getTime());
+  const strategyTimes = chartData.map((point) => new Date(point.fullDate).getTime());
   const matchedCloses: number[] = [];
   let cursor = 0;
   let lastClose: number | null = null;
@@ -515,7 +550,9 @@ export function buildComparisonSeriesFromCloses(
 
   const values = matchedCloses.map((close) => round(((close / baseClose) - 1) * 100, 2));
   const assetReturns = matchedCloses.map((close, index) => (index === 0 ? 0 : close / matchedCloses[index - 1] - 1));
-  const strategyReturns = strategyData.map((point) => point.return_pct / 100);
+  const strategyReturns = chartData.map((point, index) => (
+    index === 0 ? 0 : (point.curve1x - chartData[index - 1].curve1x) / 100
+  ));
   const correlation = round(pearsonCorrelation(strategyReturns, assetReturns), 4);
 
   return {
