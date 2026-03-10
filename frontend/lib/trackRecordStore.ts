@@ -5,7 +5,6 @@ import type { TrackRecordTradeInput, TradeDirection } from "@/components/track-r
 
 const HISTORICAL_DATASET_PATH = path.join(
   process.cwd(),
-  "frontend",
   "data",
   "track-record",
   "trades_clean_compounded.csv"
@@ -13,7 +12,6 @@ const HISTORICAL_DATASET_PATH = path.join(
 
 const APPENDED_DATASET_PATH = path.join(
   process.cwd(),
-  "frontend",
   "data",
   "track-record",
   "trades_appended_api.json"
