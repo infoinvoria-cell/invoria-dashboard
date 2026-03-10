@@ -104,7 +104,7 @@ function resolveApiBase(): string {
   }
 
   if (typeof window === "undefined") {
-    return process.env.NODE_ENV === "development" ? "http://127.0.0.1:8000" : "";
+    return "";
   }
   try {
     const qp = new URLSearchParams(window.location.search);
@@ -114,11 +114,6 @@ function resolveApiBase(): string {
     }
   } catch (_err) {
     // no-op
-  }
-
-  const host = window.location.hostname.toLowerCase();
-  if (host === "localhost" || host === "127.0.0.1") {
-    return "http://127.0.0.1:8000";
   }
 
   return "";

@@ -2073,7 +2073,7 @@ export default function App() {
             onClick={() => activateSection("seasonality")}
           >
             <div className="ivq-section-label">Seasonality</div>
-            <div className="grid min-h-0 flex-1 grid-cols-1 gap-3.5 overflow-hidden min-[769px]:grid-cols-[minmax(0,1fr)_176px]">
+            <div className="grid min-h-0 flex-1 grid-cols-1 gap-3.5 overflow-hidden min-[769px]:grid-cols-[minmax(0,1fr)_188px]">
                 <div className="ivq-subpanel relative h-full min-h-0 overflow-hidden rounded-md p-[2px]">
                   <div className="h-full min-h-0">
                     <Suspense fallback={<div className="grid h-full place-items-center text-xs text-slate-400">Loading seasonality...</div>}>
@@ -2090,7 +2090,7 @@ export default function App() {
                         {currentSeasonPattern.label}
                       </div>
                       <div className="mt-1 text-[10px] font-semibold" style={{ color: currentPatternColor }}>
-                        {currentPatternStateLabel} · {currentPatternReturnLabel}
+                        {currentPatternStateLabel} / {currentPatternReturnLabel}
                       </div>
                     </div>
                     <span className="text-[10px] font-semibold text-slate-300">{currentSeasonPattern.holdLabel}</span>

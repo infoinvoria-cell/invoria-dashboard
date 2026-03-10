@@ -1,6 +1,6 @@
 {
   "name": "invoria-next-frontend",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "scripts": {
     "clean-dev": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"Remove-Item -Recurse -Force .next -ErrorAction SilentlyContinue; npm install; npm run dev\"",
@@ -8,7 +8,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "snapshot:timeseries": "node scripts/prefetch-timeseries-snapshots.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^9.108.3",

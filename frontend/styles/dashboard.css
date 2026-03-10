@@ -387,7 +387,7 @@ body::-webkit-scrollbar-thumb {
 
 .ivq-screener-header-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.45fr) minmax(318px, 0.72fr);
+  grid-template-columns: minmax(0, 1.34fr) minmax(296px, 0.58fr);
   gap: 14px;
   margin-bottom: 14px;
   align-items: stretch;
@@ -397,7 +397,7 @@ body::-webkit-scrollbar-thumb {
   display: grid;
   gap: 12px;
   grid-template-rows: repeat(3, minmax(0, 1fr));
-  min-height: 596px;
+  min-height: 512px;
 }
 
 .ivq-screener-main-card,
@@ -409,7 +409,7 @@ body::-webkit-scrollbar-thumb {
 
 .ivq-screener-main-card {
   padding: 12px;
-  min-height: 596px;
+  min-height: 512px;
 }
 
 .ivq-screener-main-card__head {
@@ -440,7 +440,7 @@ body::-webkit-scrollbar-thumb {
 
 .ivq-screener-main-card__body {
   position: relative;
-  height: 520px;
+  height: 438px;
 }
 
 .ivq-screener-main-card__body--meta .ivq-screener-chart-meta {

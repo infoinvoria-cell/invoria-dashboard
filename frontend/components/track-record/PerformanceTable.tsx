@@ -110,7 +110,7 @@ export default function PerformanceTable({
   const compactMode = isMobileViewport && !isLandscapeViewport;
   const yearColClass = mobileDense ? "w-[12%]" : compactMode ? "w-[10%]" : "w-[56px] min-[769px]:w-[64px]";
   const monthColClass = mobileDense ? "w-[5.75%]" : compactMode ? "w-[5.95%]" : "w-[42px] min-[769px]:w-auto";
-  const totalColClass = mobileDense ? "w-[19%]" : compactMode ? "w-[18%]" : "w-[92px] min-[769px]:w-[96px]";
+  const totalColClass = mobileDense ? "w-[19%]" : compactMode ? "w-[18%]" : "w-[112px] min-[769px]:w-[132px] xl:w-[144px]";
   const monthHeaderClass = mobileDense
     ? "border-y px-0 py-2 text-center text-[5px] uppercase tracking-[0.04em]"
     : compactMode
@@ -135,7 +135,7 @@ export default function PerformanceTable({
     ? "whitespace-nowrap text-[15px] font-semibold"
     : compactMode
       ? "whitespace-nowrap text-[17px] font-semibold"
-      : "whitespace-nowrap text-[19px] font-semibold min-[769px]:text-[22px] xl:text-[24px]";
+      : "whitespace-nowrap text-[18px] font-semibold min-[769px]:text-[20px] xl:text-[22px]";
 
   const renderTableCard = (expanded = false) => (
     <section
@@ -293,7 +293,7 @@ export default function PerformanceTable({
                 Cumulative Return - {displayMultiplier}x
               </td>
               <td
-                className={`${mobileDense ? "rounded-r-2xl border-y border-r py-3 pl-1 pr-3 text-right font-semibold leading-none" : compactMode ? "rounded-r-2xl border-y border-r py-3 pl-2 pr-4 text-right font-semibold leading-none" : "rounded-r-2xl border-y border-r py-3 pl-2 pr-5 text-right font-semibold leading-none min-[769px]:pl-3 min-[769px]:pr-7"}`}
+                className={`${mobileDense ? "rounded-r-2xl border-y border-r py-3 pl-1 pr-3 text-right font-semibold leading-none" : compactMode ? "rounded-r-2xl border-y border-r py-3 pl-2 pr-4 text-right font-semibold leading-none" : "rounded-r-2xl border-y border-r py-3 pl-2 pr-3 text-right font-semibold leading-none min-[769px]:pl-3 min-[769px]:pr-4 xl:pr-5"}`}
                 style={{ borderColor: palette.panelBorder, background: totalBackground, color: totalRowTone }}
               >
                 <span className={totalRowValueClass}>

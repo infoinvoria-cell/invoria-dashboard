@@ -1,4 +1,5 @@
 import assetSnapshot from "@/data/asset-snapshot.json";
+import { buildEvaluationPayloadFromValuation, buildValuationSeries } from "@/lib/screener/valuation";
 
 type AssetLocation = {
   label: string;
@@ -33,18 +34,9 @@ type OhlcvBar = {
   volume: number | null;
 };
 
-type EvaluationPoint = {
+type SeriesPoint = {
   t: string;
-  v10: number | null;
-  v20: number | null;
-};
-
-type EvaluationSeries = {
-  id: string;
-  label: string;
-  symbol: string;
-  color: string;
-  points: EvaluationPoint[];
+  close: number;
 };
 
 const DAY_MS = 86_400_000;
@@ -230,6 +222,9 @@ async function fetchYahooRaw(symbol: string, tf: "D" | "W" | "M" | "4H" | "1H"):
     if (![ts, open, high, low, close].every(Number.isFinite)) {
       continue;
     }
+    if (open <= 0 || high <= 0 || low <= 0 || close <= 0) {
+      continue;
+    }
     out.push({
       t: new Date(ts).toISOString().replace(".000Z", "Z"),
       open,
@@ -293,7 +288,8 @@ function aggregateBars(bars: OhlcvBar[], bucketFn: (timestampMs: number) => numb
         close,
         volume,
       };
-    });
+    })
+    .filter((row) => row.open > 0 && row.high > 0 && row.low > 0 && row.close > 0);
 }
 
 async function fetchYahooBars(symbol: string, tf: "D" | "W" | "M" | "4H" | "1H"): Promise<OhlcvBar[]> {
@@ -451,27 +447,6 @@ function alignBars(left: OhlcvBar[], right: OhlcvBar[]): Array<{ t: string; left
     .filter((row) => Number.isFinite(row.left) && Number.isFinite(row.right));
 }
 
-function valuationValueSeries(aligned: Array<{ t: string; left: number; right: number }>) {
-  const points: EvaluationPoint[] = [];
-  for (let index = 0; index < aligned.length; index += 1) {
-    const row = aligned[index];
-    const prev10 = aligned[index - 10];
-    const prev20 = aligned[index - 20];
-    const v10 = prev10
-      ? clip((((row.left / prev10.left) - (row.right / prev10.right)) * 1000), -100, 100)
-      : null;
-    const v20 = prev20
-      ? clip((((row.left / prev20.left) - (row.right / prev20.right)) * 1000), -100, 100)
-      : null;
-    points.push({
-      t: row.t,
-      v10: v10 == null ? null : Number(v10.toFixed(2)),
-      v20: v20 == null ? null : Number(v20.toFixed(2)),
-    });
-  }
-  return points;
-}
-
 export async function buildYahooEvaluationPayload(assetId: string) {
   const asset = findAsset(assetId);
   if (!asset) {
@@ -485,37 +460,37 @@ export async function buildYahooEvaluationPayload(assetId: string) {
     dailyBarsForAssetOrSymbol("^TNX"),
   ]);
 
-  const goldPoints = valuationValueSeries(alignBars(assetBars, goldBars));
-  const usdPoints = valuationValueSeries(alignBars(assetBars, usdBars));
-  const us10yPoints = valuationValueSeries(alignBars(assetBars, us10yBars));
+  const assetSeries: SeriesPoint[] = assetBars.map((row) => ({ t: row.t, close: Number(row.close) }));
+  const goldSeries: SeriesPoint[] = goldBars.map((row) => ({ t: row.t, close: Number(row.close) }));
+  const usdSeries: SeriesPoint[] = usdBars.map((row) => ({ t: row.t, close: Number(row.close) }));
+  const us10ySeries: SeriesPoint[] = us10yBars.map((row) => ({ t: row.t, close: Number(row.close) }));
 
-  const combinedMap = new Map<string, { v10: number[]; v20: number[] }>();
-  for (const row of [goldPoints, usdPoints, us10yPoints].flat()) {
-    const bucket = combinedMap.get(row.t) ?? { v10: [], v20: [] };
-    if (row.v10 != null) bucket.v10.push(row.v10);
-    if (row.v20 != null) bucket.v20.push(row.v20);
-    combinedMap.set(row.t, bucket);
-  }
-
-  const combinedPoints = Array.from(combinedMap.entries())
-    .sort((left, right) => left[0].localeCompare(right[0]))
-    .map(([t, bucket]) => ({
-      t,
-      v10: bucket.v10.length ? Number(average(bucket.v10).toFixed(2)) : null,
-      v20: bucket.v20.length ? Number(average(bucket.v20).toFixed(2)) : null,
-    }));
-
-  const series: EvaluationSeries[] = [
-    { id: "combined", label: "Combined", symbol: "COMB", color: "#2962ff", points: combinedPoints.slice(-260) },
-    { id: "gold", label: "Gold", symbol: "XAU", color: "#ffeb3b", points: goldPoints.slice(-260) },
-    { id: "dxy", label: "Dollar", symbol: "USD", color: "#4caf50", points: usdPoints.slice(-260) },
-    { id: "us10y", label: "US10Y", symbol: "US10Y", color: "#ff6f8d", points: us10yPoints.slice(-260) },
-  ];
+  const val10 = buildValuationSeries(
+    assetSeries,
+    goldSeries,
+    usdSeries,
+    us10ySeries,
+    10,
+    100,
+    75,
+    -75,
+    "combined",
+  );
+  const val20 = buildValuationSeries(
+    assetSeries,
+    goldSeries,
+    usdSeries,
+    us10ySeries,
+    20,
+    100,
+    75,
+    -75,
+    "combined",
+  );
 
   return {
-    assetId: asset.id,
+    ...buildEvaluationPayloadFromValuation(asset.id, "Gold", "Dollar Index", "US 10Y", val10, val20),
     updatedAt: nowIso(),
-    series,
   };
 }
 

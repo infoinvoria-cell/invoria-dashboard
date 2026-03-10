@@ -12,9 +12,11 @@ export function sanitizeOhlcvPoint(point: OhlcvPoint | null | undefined): OhlcvP
   const lowRaw = toFinite(point.low);
   const close = toFinite(point.close);
   if (open == null || highRaw == null || lowRaw == null || close == null) return null;
+  if (open <= 0 || highRaw <= 0 || lowRaw <= 0 || close <= 0) return null;
 
   const high = Math.max(highRaw, open, close);
   const low = Math.min(lowRaw, open, close);
+  if (high <= 0 || low <= 0) return null;
   const volume = point.volume == null ? null : toFinite(point.volume);
   return {
     t: String(point.t),

@@ -43,11 +43,19 @@ function formatCandidate(candidate: SeasonalCandidate | null): string {
   return `${dayLabel(candidate.startDay)} -> ${dayLabel(candidate.endDay)} | ${candidate.direction} | ${candidate.holdDays}d`;
 }
 
+function detailTone(value: string): string {
+  const probe = String(value || "").toLowerCase();
+  if (probe === "--") return "text-slate-400";
+  if (probe.includes("long") || probe.startsWith("+")) return "text-emerald-300";
+  if (probe.includes("short") || probe.startsWith("-")) return "text-rose-300";
+  return "text-slate-100";
+}
+
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-[12px] border border-white/8 bg-white/[0.03] px-3 py-2">
-      <div className="text-[10px] uppercase tracking-[0.14em] text-slate-400">{label}</div>
-      <div className="mt-1 text-sm font-semibold text-slate-100">{value}</div>
+    <div className="rounded-[16px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))] px-3 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+      <div className="text-[9px] uppercase tracking-[0.18em] text-slate-400">{label}</div>
+      <div className={`mt-1.5 text-[15px] font-semibold leading-tight ${detailTone(value)}`}>{value}</div>
     </div>
   );
 }
@@ -181,8 +189,8 @@ export default function SeasonalityPage() {
 
   return (
     <main className="ivq-terminal-page xl:min-h-[calc(100dvh-50px)]">
-      <div className="grid h-full min-h-0 gap-4 xl:grid-cols-[220px_minmax(0,1fr)_336px]">
-        <aside className="glass-panel flex min-h-0 max-h-[42dvh] flex-col gap-3 self-start !p-3 xl:max-h-[calc(100dvh-124px)]">
+      <div className="grid h-full min-h-0 gap-4 xl:grid-cols-[232px_minmax(0,1fr)_320px]">
+        <aside className="glass-panel flex min-h-0 max-h-[38dvh] flex-col gap-3 self-start !p-3 xl:max-h-[calc(100dvh-124px)]">
           <div className="ivq-input-wrap">
             <Search size={14} strokeWidth={1.8} />
             <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Asset suchen" className="ivq-input" />
@@ -204,7 +212,7 @@ export default function SeasonalityPage() {
           </div>
         </aside>
 
-        <section className="grid min-h-0 gap-3 xl:grid-rows-[auto_minmax(0,1fr)_112px]">
+        <section className="grid min-h-0 gap-3 xl:grid-rows-[auto_minmax(0,1fr)_208px]">
           <section className="glass-panel flex items-center justify-between gap-3 !p-3">
             <div className="flex items-center gap-2">
               {selectedAsset ? <AssetIcon iconKey={selectedAsset.iconKey} category={selectedAsset.category} assetName={selectedAsset.name} className="!h-[18px] !w-[18px]" /> : null}
@@ -219,9 +227,9 @@ export default function SeasonalityPage() {
             </div>
           </section>
 
-          <section className="glass-panel grid min-h-0 gap-3 !p-3 xl:grid-rows-[minmax(0,1fr)_76px]">
-            <div className="grid min-h-0 gap-3 xl:grid-cols-[minmax(0,1fr)_240px]">
-              <div className="min-h-0">
+          <section className="glass-panel grid min-h-0 gap-3 !p-3.5 xl:grid-rows-[minmax(0,1fr)_94px]">
+            <div className="grid min-h-0 gap-3 xl:grid-cols-[minmax(0,1fr)_272px]">
+              <div className="min-h-[320px] xl:min-h-0">
                 {loading ? (
                   <div className="grid h-full place-items-center text-sm text-slate-400">Lade Jahres-Saisonalitaet...</div>
                 ) : (
@@ -236,7 +244,7 @@ export default function SeasonalityPage() {
                   />
                 )}
               </div>
-              <div className="grid content-start gap-2">
+              <div className="grid content-start gap-2 sm:grid-cols-2 xl:grid-cols-1">
                 <DetailRow label="Current Pattern" value={formatCandidate(workbench.currentPattern)} />
                 <DetailRow label="Current Winrate" value={workbench.currentPattern ? `${workbench.currentPattern.winRate.toFixed(0)}%` : "--"} />
                 <DetailRow label="Current Avg Return" value={workbench.currentPattern ? formatPct(workbench.currentPattern.averageReturn) : "--"} />
@@ -245,7 +253,7 @@ export default function SeasonalityPage() {
                 <DetailRow label="Data Base" value={`${payload?.yearsUsed ?? Math.max(10, years)} Jahre`} />
               </div>
             </div>
-            <div className="grid grid-cols-[minmax(0,1fr)_170px_150px] items-center gap-3 rounded-[14px] border border-white/8 bg-white/[0.03] px-3 py-2.5">
+            <div className="grid gap-3 rounded-[16px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] px-3.5 py-3 sm:grid-cols-[minmax(0,1fr)_170px_150px]">
               <div className="text-[10px] uppercase tracking-[0.16em] text-slate-300">
                 Range direkt im Chart mit der Maus ziehen. Haltedauer wird automatisch auf {minHold}-{maxHold} Tage begrenzt.
               </div>
@@ -260,12 +268,12 @@ export default function SeasonalityPage() {
             </div>
           </section>
 
-          <section className="glass-panel flex min-h-0 flex-col gap-2 !p-3">
+          <section className="glass-panel flex min-h-0 flex-col gap-3 !p-3.5">
             <div className="flex items-center justify-between gap-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-300">
               <span>Winrate 01.01 - 31.12</span>
-              <span>{minHold}-{maxHold} Tage Hold</span>
+              <span className="rounded-full border border-white/10 px-2 py-1 text-[10px] tracking-[0.14em]">{minHold}-{maxHold} Tage Hold</span>
             </div>
-            <div className="min-h-0 flex-1">
+            <div className="min-h-[190px] flex-1">
               <SeasonalityWinrateChart
                 points={workbench.dayCurve}
                 rangeStartDay={safeRangeStart}
@@ -285,7 +293,7 @@ export default function SeasonalityPage() {
           </div>
 
           {detailsOpen ? (
-            <div className="grid min-h-0 flex-1 content-start gap-2 overflow-auto">
+            <div className="grid min-h-0 flex-1 content-start gap-2 overflow-auto sm:grid-cols-2 xl:grid-cols-1">
               <label className="ivq-form-row">
                 <span>Source</span>
                 <select value={source} onChange={(event) => setSource(event.target.value as DataSource)} className="ivq-select">

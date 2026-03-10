@@ -15,15 +15,15 @@ function clamp(value: number, min: number, max: number): number {
 
 export default function SeasonalityWinrateChart({ points, rangeStartDay, rangeEndDay, themeColor }: Props) {
   const width = 960;
-  const height = 150;
-  const paddingLeft = 42;
-  const paddingRight = 12;
-  const paddingTop = 14;
-  const paddingBottom = 24;
+  const height = 220;
+  const paddingLeft = 46;
+  const paddingRight = 14;
+  const paddingTop = 18;
+  const paddingBottom = 30;
   const safePoints = points.slice(0, 366);
 
   if (safePoints.length < 2) {
-    return <div className="h-[150px] w-full rounded-[14px] border border-white/8 bg-white/[0.03]" />;
+    return <div className="h-[220px] w-full rounded-[14px] border border-white/8 bg-white/[0.03]" />;
   }
 
   const minX = 1;
@@ -38,6 +38,17 @@ export default function SeasonalityWinrateChart({ points, rangeStartDay, rangeEn
 
   const rangeLeft = xFor(clamp(rangeStartDay, 1, 366));
   const rangeRight = xFor(clamp(rangeEndDay, 1, 366));
+  const areaPath = [
+    `M ${xFor(safePoints[0].day)} ${height - paddingBottom}`,
+    ...safePoints.map((point) => `L ${xFor(point.day)} ${yFor(point.winRate)}`),
+    `L ${xFor(safePoints[safePoints.length - 1].day)} ${height - paddingBottom}`,
+    "Z",
+  ].join(" ");
+  const linePath = safePoints
+    .map((point, index) => `${index === 0 ? "M" : "L"} ${xFor(point.day)} ${yFor(point.winRate)}`)
+    .join(" ");
+  const rangeMid = Math.round((rangeStartDay + rangeEndDay) / 2);
+  const rangePoint = safePoints.find((point) => point.day >= rangeMid) ?? safePoints[safePoints.length - 1];
 
   return (
     <svg viewBox={`0 0 ${width} ${height}`} className="h-full w-full overflow-visible rounded-[14px]">
@@ -64,22 +75,9 @@ export default function SeasonalityWinrateChart({ points, rangeStartDay, rangeEn
           </text>
         </g>
       ))}
-      {safePoints.map((point, index) => {
-        if (index === 0) return null;
-        const previous = safePoints[index - 1];
-        return (
-          <line
-            key={`${previous.day}-${point.day}`}
-            x1={xFor(previous.day)}
-            y1={yFor(previous.winRate)}
-            x2={xFor(point.day)}
-            y2={yFor(point.winRate)}
-            stroke={point.direction === "SHORT" ? "#ff5a67" : "#39ff40"}
-            strokeWidth="2"
-            strokeLinecap="round"
-          />
-        );
-      })}
+      <path d={areaPath} fill={themeColor === "#d6c38f" ? "rgba(214,195,143,0.18)" : "rgba(77,135,254,0.16)"} />
+      <path d={linePath} fill="none" stroke={themeColor} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx={xFor(rangePoint.day)} cy={yFor(rangePoint.winRate)} r="4" fill={themeColor} stroke="rgba(7,14,26,0.95)" strokeWidth="2" />
       <line x1={paddingLeft} y1={height - paddingBottom} x2={width - paddingRight} y2={height - paddingBottom} stroke="rgba(255,255,255,0.14)" strokeWidth="1" />
       {[1, 92, 183, 275, 366].map((day) => (
         <text

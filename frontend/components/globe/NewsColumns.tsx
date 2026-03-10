@@ -191,7 +191,7 @@ function NewsList({
             return (
               <article
                 key={key}
-                className="rounded-xl border border-slate-700/55 bg-[rgba(7,14,26,0.62)] px-3 py-1.5 text-[10px] text-slate-100 shadow-[0_10px_24px_rgba(0,0,0,0.22)]"
+                className="rounded-xl border border-slate-700/55 bg-[rgba(7,14,26,0.62)] px-3 py-1.25 text-[10px] text-slate-100 shadow-[0_10px_24px_rgba(0,0,0,0.22)]"
               >
                 <div className="mb-1 flex items-center justify-between gap-2">
                   <div className="flex min-w-0 items-center gap-2">
@@ -231,7 +231,7 @@ function NewsList({
                   href={item.url}
                   target="_blank"
                   rel="noreferrer"
-                  className={`line-clamp-1 block text-[11px] font-semibold leading-snug text-slate-50 transition ${goldThemeEnabled ? "hover:text-[#ffe4a6]" : "hover:text-[#97b7ff]"}`}
+                  className={`line-clamp-1 block text-[10.5px] font-semibold leading-snug text-slate-50 transition ${goldThemeEnabled ? "hover:text-[#ffe4a6]" : "hover:text-[#97b7ff]"}`}
                 >
                   {titleText}
                 </a>
@@ -247,7 +247,7 @@ function NewsList({
                     </span>
                     {relatedAssets.length ? (
                       <span className="truncate text-[8px] text-slate-500">
-                        {relatedAssets.join(" • ").toUpperCase()}
+                        {relatedAssets.join(" / ").toUpperCase()}
                       </span>
                     ) : null}
                   </div>

@@ -14,6 +14,7 @@ import {
   buildYahooSeasonalityPayload,
   buildYahooTimeseriesPayload,
 } from "@/lib/server/yahooFallback";
+import { readTimeseriesSnapshot } from "@/lib/server/timeseriesSnapshots";
 
 export const dynamic = "force-dynamic";
 
@@ -169,6 +170,10 @@ async function fallbackResponse(path: string[], request: NextRequest): Promise<N
     const payload = fallbackComparisonTimeseries(normalized[1]);
     if (payload) {
       return NextResponse.json(payload);
+    }
+    const snapshot = await readTimeseriesSnapshot(source, normalized[1]);
+    if (snapshot) {
+      return NextResponse.json(snapshot);
     }
     try {
       return NextResponse.json(await buildYahooTimeseriesPayload(normalized[1], timeframe, source, continuousMode));
