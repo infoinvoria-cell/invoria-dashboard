@@ -17,10 +17,13 @@ export const fetchCache = "force-no-store";
 export const maxDuration = 60;
 
 function mergeConfig(input: Partial<OptimizerConfig> | null | undefined): OptimizerConfig {
-  if (!input) return DEFAULT_OPTIMIZER_CONFIG;
-  return {
+  const merged = !input ? DEFAULT_OPTIMIZER_CONFIG : {
     ...DEFAULT_OPTIMIZER_CONFIG,
     ...input,
+    valuationPeriods: input.valuationPeriods?.length ? input.valuationPeriods : DEFAULT_OPTIMIZER_CONFIG.valuationPeriods,
+    valuationModes: input.valuationModes?.length ? input.valuationModes : DEFAULT_OPTIMIZER_CONFIG.valuationModes,
+    valuationMultiPeriodLogics: input.valuationMultiPeriodLogics?.length ? input.valuationMultiPeriodLogics : DEFAULT_OPTIMIZER_CONFIG.valuationMultiPeriodLogics,
+    valuationWeightProfiles: input.valuationWeightProfiles?.length ? input.valuationWeightProfiles : DEFAULT_OPTIMIZER_CONFIG.valuationWeightProfiles,
     broadRanges: {
       ...DEFAULT_OPTIMIZER_CONFIG.broadRanges,
       ...input.broadRanges,
@@ -31,6 +34,17 @@ function mergeConfig(input: Partial<OptimizerConfig> | null | undefined): Optimi
     },
     assets: input.assets?.length ? input.assets : DEFAULT_OPTIMIZER_CONFIG.assets,
   };
+
+  if (!input) return DEFAULT_OPTIMIZER_CONFIG;
+  return {
+    ...merged,
+    broadRanges: {
+      ...merged.broadRanges,
+      zoneLookback: { min: 3, max: 10, step: 1 },
+      valuationThreshold: { min: 75, max: 75, step: 1 },
+      holdDays: { min: 5, max: 20, step: 1 },
+    },
+  };
 }
 
 function encodeLine(value: OptimizerRunStreamEvent): Uint8Array {
@@ -40,6 +54,7 @@ function encodeLine(value: OptimizerRunStreamEvent): Uint8Array {
 export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
   const config = mergeConfig(body?.config);
+  const allowInvalidCandleData = Boolean(body?.allowInvalidCandleData);
   const runId = randomUUID();
   const origin = new URL(request.url).origin;
   await createOptimizerRun(runId, config);
@@ -84,6 +99,10 @@ export async function POST(request: Request) {
               });
             },
           });
+
+          if (data.integrity.some((item) => !item.isValid) && !allowInvalidCandleData) {
+            throw new Error("Invalid candle construction detected. Confirm the warning before running the optimizer.");
+          }
 
           const result = await runOptimizerPipeline(config, data, {
             runId,

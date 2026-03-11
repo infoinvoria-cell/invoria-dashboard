@@ -1,0 +1,111 @@
+{
+  "summary": {
+    "runId": "e68400a8-16a4-4a97-8034-dc7afb63f3c0",
+    "createdAt": "2026-03-10T22:37:46.334Z",
+    "updatedAt": "2026-03-10T22:42:43.313Z",
+    "mode": "temp",
+    "assets": [
+      "cross_eurusd",
+      "cross_gbpusd",
+      "cross_usdjpy",
+      "cross_usdchf",
+      "cross_audusd",
+      "cross_usdcad",
+      "cross_nzdusd"
+    ],
+    "strategyCount": 0,
+    "bestSharpe": 0,
+    "bestCagr": 0,
+    "status": "running",
+    "warnings": [],
+    "progress": {
+      "runId": "e68400a8-16a4-4a97-8034-dc7afb63f3c0",
+      "stage": "stage1",
+      "label": "Stage 1 - Parameter discovery",
+      "stageIndex": 2,
+      "stageCount": 5,
+      "percent": 8.333333333333332,
+      "completed": 500,
+      "total": 6000,
+      "etaSeconds": 3189,
+      "message": "500 / 6.000 strategies evaluated.",
+      "updatedAt": "2026-03-10T22:42:43.313Z"
+    }
+  },
+  "config": {
+    "assets": [
+      "cross_eurusd",
+      "cross_gbpusd",
+      "cross_usdjpy",
+      "cross_usdchf",
+      "cross_audusd",
+      "cross_usdcad",
+      "cross_nzdusd"
+    ],
+    "source": "dukascopy",
+    "monteCarloSimulations": 1000,
+    "broadRanges": {
+      "zoneLookback": {
+        "min": 3,
+        "max": 5,
+        "step": 1
+      },
+      "valuationLength": {
+        "min": 10,
+        "max": 20,
+        "step": 10
+      },
+      "valuationThreshold": {
+        "min": 70,
+        "max": 80,
+        "step": 5
+      },
+      "seasonalityYears": {
+        "min": 8,
+        "max": 12,
+        "step": 2
+      },
+      "holdDays": {
+        "min": 5,
+        "max": 20,
+        "step": 5
+      },
+      "atrPeriod": {
+        "min": 10,
+        "max": 20,
+        "step": 5
+      },
+      "atrMultiplier": {
+        "min": 1,
+        "max": 3,
+        "step": 0.5
+      },
+      "fixedStopPct": {
+        "min": 0.4,
+        "max": 1.2,
+        "step": 0.2
+      },
+      "takeProfitRr": {
+        "min": 1,
+        "max": 3,
+        "step": 0.5
+      },
+      "breakEvenRr": {
+        "min": 0.5,
+        "max": 1.5,
+        "step": 0.5
+      }
+    },
+    "toggles": {
+      "allowNormalZones": true,
+      "allowStrongZones": true,
+      "requireCandleConfirmation": true,
+      "requireValuation": true,
+      "requireSeasonality": true,
+      "allowLong": true,
+      "allowShort": true
+    }
+  },
+  "result": null,
+  "error": null
+}

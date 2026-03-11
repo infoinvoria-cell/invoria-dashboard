@@ -1,4 +1,5 @@
 import assetSnapshot from "@/data/asset-snapshot.json";
+import { analyzeOhlcvIntegrity, filterValidOhlcvSeries } from "@/lib/candleIntegrity";
 import { buildEvaluationPayloadFromValuation, buildValuationSeries } from "@/lib/screener/valuation";
 
 type AssetLocation = {
@@ -179,7 +180,7 @@ function tfConfig(tf: "D" | "W" | "M" | "4H" | "1H") {
   }
   return {
     interval: "1d",
-    range: "10y",
+    range: "max",
   };
 }
 
@@ -228,13 +229,13 @@ async function fetchYahooRaw(symbol: string, tf: "D" | "W" | "M" | "4H" | "1H"):
     out.push({
       t: new Date(ts).toISOString().replace(".000Z", "Z"),
       open,
-      high: Math.max(high, open, close),
-      low: Math.min(low, open, close),
+      high,
+      low,
       close,
       volume: Number.isFinite(Number(volumes[index])) ? Number(volumes[index]) : null,
     });
   }
-  return out;
+  return filterValidOhlcvSeries(out);
 }
 
 function startOfIsoWeek(timestampMs: number): number {
@@ -396,6 +397,7 @@ export async function buildYahooTimeseriesPayload(
   }
 
   const lastClose = bars[bars.length - 1]?.close ?? 0;
+  const integrity = analyzeOhlcvIntegrity(bars);
   return {
     assetId: asset.id,
     symbol: asset.symbol || asset.tvSource || yahooSymbol,
@@ -412,6 +414,7 @@ export async function buildYahooTimeseriesPayload(
       start: bars[0]?.t ?? null,
       end: bars[bars.length - 1]?.t ?? null,
     },
+    integrity,
     ohlcv: bars,
     supplyDemand: {
       demand: [],
@@ -626,6 +629,7 @@ export async function buildYahooReferenceTimeseriesPayload(
       start: bars[0]?.t ?? null,
       end: bars[bars.length - 1]?.t ?? null,
     },
+    integrity: analyzeOhlcvIntegrity(bars),
     ohlcv: bars,
     supplyDemand: {
       demand: [],

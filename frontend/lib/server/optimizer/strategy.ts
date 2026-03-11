@@ -1,22 +1,28 @@
 import type {
   EquityPoint,
   OptimizerAssetId,
+  OptimizerCandleIntegrityReport,
+  OptimizerDebugAsset,
+  OptimizerDebugSignal,
+  OptimizerDebugZone,
+  OptimizerPreviewResponse,
+  OptimizerSeasonalityWindow,
   OptimizerStrategyResult,
+  OptimizerStrategyValuationSummary,
+  OptimizerTradeValidation,
   StrategyAssetMetrics,
   StrategyMetrics,
   StrategyParams,
   TradeRecord,
+  ValuationMode,
+  ValuationMultiPeriodLogic,
+  ValuationPeriod,
+  ValuationWeightProfile,
 } from "@/lib/optimizer/types";
-import type { OptimizerAssetDataset, OptimizerDailyBar, OptimizerReferenceSeries } from "@/lib/server/optimizer/data";
-
-type Zone = {
-  kind: "demand" | "supply";
-  low: number;
-  high: number;
-  formedAt: number;
-  broken: boolean;
-  strong: boolean;
-};
+import { buildSupplyDemandZones } from "@/lib/screener/supplyDemand";
+import type { PineZone } from "@/lib/screener/types";
+import { buildValuationSeries } from "@/lib/screener/valuation";
+import type { OptimizerAssetDataset, OptimizerDailyBar, OptimizerLoadedData, OptimizerReferenceSeries } from "@/lib/server/optimizer/data";
 
 type SeasonalityPoint = {
   expectedReturn: number;
@@ -29,9 +35,49 @@ type AssetBacktestResult = {
   trades: TradeRecord[];
   assetMetrics: StrategyAssetMetrics;
   equityCurve: EquityPoint[];
+  debugAsset: OptimizerDebugAsset;
+  valuation: OptimizerStrategyValuationSummary;
 };
 
+type ValuationSnapshot = {
+  rawMean: number | null;
+  combined: number | null;
+  weightedCombined: number | null;
+  compare1: number | null;
+  compare2: number | null;
+  compare3: number | null;
+};
+
+type ValuationSignalState = {
+  longPass: boolean;
+  shortPass: boolean;
+  signalScore: number | null;
+};
+
+export type OptimizerStrategyEvaluation =
+  | {
+      status: "valid";
+      result: Omit<OptimizerStrategyResult, "rank" | "stage" | "strategyId" | "monteCarlo">;
+    }
+  | {
+      status: "invalid_trade_count";
+      result: Omit<OptimizerStrategyResult, "rank" | "stage" | "strategyId" | "monteCarlo">;
+    }
+  | {
+      status: "rejected";
+      result: Omit<OptimizerStrategyResult, "rank" | "stage" | "strategyId" | "monteCarlo">;
+    };
+
+const MIN_TRADES_PER_ASSET = 20;
+const MIN_TRADES_PER_YEAR = 8;
+const VALUATION_THRESHOLD = 75;
+const VALUATION_RESCALE_LENGTH = 100;
 const seasonalityCache = new Map<string, SeasonalityPoint[]>();
+const WEIGHT_PROFILES: Record<ValuationWeightProfile, { dxy: number; gold: number; us10y: number }> = {
+  equal: { dxy: 1 / 3, gold: 1 / 3, us10y: 1 / 3 },
+  macro: { dxy: 0.4, gold: 0.25, us10y: 0.35 },
+  fx: { dxy: 0.5, gold: 0.2, us10y: 0.3 },
+};
 
 function isoDay(value: string): string {
   return new Date(value).toISOString().slice(0, 10);
@@ -67,6 +113,23 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
 
+function toOhlcv(bars: OptimizerDailyBar[]) {
+  return bars.map((bar) => ({
+    t: bar.t,
+    open: bar.open,
+    high: bar.high,
+    low: bar.low,
+    close: bar.close,
+    volume: null,
+  }));
+}
+
+function referenceSeriesToArray(series: OptimizerReferenceSeries): Array<{ t: string; close: number }> {
+  return Array.from(series.closesByDate.entries())
+    .sort((left, right) => left[0].localeCompare(right[0]))
+    .map(([day, close]) => ({ t: `${day}T00:00:00Z`, close }));
+}
+
 function computeAtr(bars: OptimizerDailyBar[], period: number): number[] {
   const out = new Array<number>(bars.length).fill(0);
   let running = 0;
@@ -92,46 +155,8 @@ function computeAtr(bars: OptimizerDailyBar[], period: number): number[] {
   return out;
 }
 
-function closesByDate(series: OptimizerReferenceSeries): Map<string, number> {
-  return series.closesByDate;
-}
-
-function computeValuationSeries(
-  bars: OptimizerDailyBar[],
-  length: 10 | 20,
-  references: { dxy: OptimizerReferenceSeries; gold: OptimizerReferenceSeries; us30y: OptimizerReferenceSeries },
-): number[] {
-  const referenceMaps = [closesByDate(references.dxy), closesByDate(references.gold), closesByDate(references.us30y)];
-  const out = new Array<number>(bars.length).fill(0);
-  const diffHistory: number[][] = [[], [], []];
-  for (let i = 0; i < bars.length; i += 1) {
-    if (i < length) {
-      out[i] = 0;
-      continue;
-    }
-    const assetReturn = (bars[i].close / bars[i - length].close) - 1;
-    const day = isoDay(bars[i].t);
-    const lengthDay = isoDay(bars[i - length].t);
-    const normalizedValues: number[] = [];
-    for (let r = 0; r < referenceMaps.length; r += 1) {
-      const end = referenceMaps[r].get(day);
-      const start = referenceMaps[r].get(lengthDay);
-      if (!end || !start) continue;
-      const diff = assetReturn - ((end / start) - 1);
-      diffHistory[r].push(diff);
-      const recent = diffHistory[r].slice(-100);
-      const min = Math.min(...recent);
-      const max = Math.max(...recent);
-      const scaled = Math.abs(max - min) < 1e-9 ? 0 : (((diff - min) / (max - min)) * 200) - 100;
-      normalizedValues.push(clamp(scaled, -100, 100));
-    }
-    out[i] = normalizedValues.length ? mean(normalizedValues) : 0;
-  }
-  return out;
-}
-
 function buildSeasonalitySeries(assetId: string, bars: OptimizerDailyBar[], holdDays: number, years: number): SeasonalityPoint[] {
-  const key = `${assetId}:${holdDays}:${years}`;
+  const key = `${assetId}:${holdDays}:${years}:${bars[0]?.t ?? "none"}:${bars[bars.length - 1]?.t ?? "none"}`;
   const cached = seasonalityCache.get(key);
   if (cached) return cached;
 
@@ -156,75 +181,6 @@ function buildSeasonalitySeries(assetId: string, bars: OptimizerDailyBar[], hold
   }
   seasonalityCache.set(key, out);
   return out;
-}
-
-function updateZones(bars: OptimizerDailyBar[], index: number, zones: Zone[], lookback: number): Zone[] {
-  if (index < Math.max(2, lookback)) return zones;
-  const prev = bars[index - 1];
-  const prev2 = bars[index - 2];
-  const current = bars[index];
-  const nextZones = zones.map((zone) => {
-    if (zone.broken) return zone;
-    if (zone.kind === "demand" && current.close < zone.low) return { ...zone, broken: true };
-    if (zone.kind === "supply" && current.close > zone.high) return { ...zone, broken: true };
-    return zone;
-  });
-
-  if (prev.low < prev2.low && prev.low < current.low) {
-    nextZones.push({
-      kind: "demand",
-      low: prev.low,
-      high: Math.max(prev.open, prev.close),
-      formedAt: index - 1,
-      broken: false,
-      strong: false,
-    });
-  }
-  if (prev.high > prev2.high && prev.high > current.high) {
-    nextZones.push({
-      kind: "supply",
-      low: Math.min(prev.open, prev.close),
-      high: prev.high,
-      formedAt: index - 1,
-      broken: false,
-      strong: false,
-    });
-  }
-  if (index >= 2) {
-    const a = bars[index - 2];
-    const c = bars[index];
-    if (a.high < c.low) {
-      nextZones.push({
-        kind: "demand",
-        low: a.high,
-        high: c.low,
-        formedAt: index,
-        broken: false,
-        strong: true,
-      });
-    }
-    if (a.low > c.high) {
-      nextZones.push({
-        kind: "supply",
-        low: c.high,
-        high: a.low,
-        formedAt: index,
-        broken: false,
-        strong: true,
-      });
-    }
-  }
-  return nextZones.filter((zone) => index - zone.formedAt <= Math.max(lookback * 8, 30));
-}
-
-function zoneTouch(bar: OptimizerDailyBar, zones: Zone[], kind: "demand" | "supply", strongOnly: boolean): boolean {
-  return zones.some((zone) => {
-    if (zone.kind !== kind || zone.broken) return false;
-    if (strongOnly && !zone.strong) return false;
-    if (!strongOnly && zone.strong) return false;
-    if (kind === "demand") return bar.low <= zone.high && bar.close >= zone.low;
-    return bar.high >= zone.low && bar.close <= zone.high;
-  });
 }
 
 function buildEquityCurve(trades: TradeRecord[]): EquityPoint[] {
@@ -287,177 +243,187 @@ function computeSharpe(returns: number[]): number {
   return (mean(returns) / sigma) * Math.sqrt(252 / Math.max(1, mean(returns.map(() => 5))));
 }
 
-function metricsFromTrades(assetId: OptimizerAssetId, trades: TradeRecord[]): StrategyAssetMetrics & { equityCurve: EquityPoint[]; expectancy: number; stability: number } {
+function metricsFromTrades(assetId: OptimizerAssetId, trades: TradeRecord[]): StrategyAssetMetrics & { equityCurve: EquityPoint[] } {
   const returns = trades.map((trade) => trade.returnPct);
   const equityCurve = buildEquityCurve(trades);
-  const sharpe = computeSharpe(returns);
-  const cagr = computeCagr(equityCurve);
-  const maxDrawdown = computeMaxDrawdown(equityCurve);
-  const profitFactor = computeProfitFactor(returns);
-  const winRate = trades.length ? trades.filter((trade) => trade.returnPct > 0).length / trades.length : 0;
-  const expectancy = trades.length ? mean(returns) : 0;
-  const stability = computeStability(equityCurve);
   return {
     assetId,
-    sharpe,
-    cagr,
-    maxDrawdown,
-    profitFactor,
+    sharpe: computeSharpe(returns),
+    cagr: computeCagr(equityCurve),
+    maxDrawdown: computeMaxDrawdown(equityCurve),
+    profitFactor: computeProfitFactor(returns),
     trades: trades.length,
-    winRate,
+    winRate: trades.length ? trades.filter((trade) => trade.returnPct > 0).length / trades.length : 0,
     equityCurve,
-    expectancy,
-    stability,
   };
 }
 
-function runAssetBacktest(
-  dataset: OptimizerAssetDataset,
-  params: StrategyParams,
-  references: { dxy: OptimizerReferenceSeries; gold: OptimizerReferenceSeries; us30y: OptimizerReferenceSeries },
-  startDate: string,
-  endDate: string,
-): AssetBacktestResult {
-  const bars = dataset.barsD1.filter((bar) => bar.t >= startDate && bar.t <= endDate);
-  const atr = computeAtr(bars, params.atrPeriod);
-  const valuation = computeValuationSeries(bars, params.valuationLength, references);
-  const seasonality = buildSeasonalitySeries(dataset.assetId, bars, params.holdDays, params.seasonalityYears);
-  const trades: TradeRecord[] = [];
-  let zones: Zone[] = [];
-  let index = Math.max(params.zoneLookback + 2, params.valuationLength + 2);
-
-  while (index < bars.length - Math.max(2, params.holdDays)) {
-    zones = updateZones(bars, index, zones, params.zoneLookback);
-    const bar = bars[index];
-    const strongDemandTouch = zoneTouch(bar, zones, "demand", true);
-    const strongSupplyTouch = zoneTouch(bar, zones, "supply", true);
-    const normalDemandTouch = zoneTouch(bar, zones, "demand", false);
-    const normalSupplyTouch = zoneTouch(bar, zones, "supply", false);
-
-    const demandTouch = params.zoneMode === "strong"
-      ? strongDemandTouch
-      : params.zoneMode === "normal"
-        ? normalDemandTouch
-        : strongDemandTouch || normalDemandTouch;
-    const supplyTouch = params.zoneMode === "strong"
-      ? strongSupplyTouch
-      : params.zoneMode === "normal"
-        ? normalSupplyTouch
-        : strongSupplyTouch || normalSupplyTouch;
-
-    const candleBull = bar.close > bar.open;
-    const candleBear = bar.close < bar.open;
-    const season = seasonality[index] ?? { expectedReturn: 0, direction: "neutral" as const, samples: 0 };
-    const valuationValue = valuation[index];
-
-    const longSignal =
-      params.allowLong
-      && demandTouch
-      && (!params.requireCandleConfirmation || candleBull)
-      && (!params.requireValuation || valuationValue <= -Math.abs(params.valuationThreshold))
-      && (!params.requireSeasonality || (season.samples >= 3 && season.direction === "long"));
-    const shortSignal =
-      params.allowShort
-      && supplyTouch
-      && (!params.requireCandleConfirmation || candleBear)
-      && (!params.requireValuation || valuationValue >= Math.abs(params.valuationThreshold))
-      && (!params.requireSeasonality || (season.samples >= 3 && season.direction === "short"));
-
-    if (!longSignal && !shortSignal) {
-      index += 1;
-      continue;
-    }
-    if (longSignal && shortSignal) {
-      index += 1;
-      continue;
-    }
-
-    const direction: "long" | "short" = longSignal ? "long" : "short";
-    const entryPrice = bar.close;
-    const atrDistance = Math.max(atr[index], entryPrice * 0.002);
-    const riskDistance = params.stopMode === "atr"
-      ? atrDistance * params.atrMultiplier
-      : entryPrice * (params.fixedStopPct / 100);
-    const initialStop = direction === "long" ? entryPrice - riskDistance : entryPrice + riskDistance;
-    const takeProfit = direction === "long"
-      ? entryPrice + (riskDistance * params.takeProfitRr)
-      : entryPrice - (riskDistance * params.takeProfitRr);
-
-    let stopPrice = initialStop;
-    let exitPrice = bars[Math.min(bars.length - 1, index + params.holdDays)].close;
-    let exitIndex = Math.min(bars.length - 1, index + params.holdDays);
-    let stopHit = false;
-    let takeProfitHit = false;
-    let breakEvenTriggered = false;
-
-    for (let j = index + 1; j <= Math.min(bars.length - 1, index + params.holdDays); j += 1) {
-      const nextBar = bars[j];
-      const favorableMove = direction === "long" ? nextBar.high - entryPrice : entryPrice - nextBar.low;
-      if (!breakEvenTriggered && favorableMove >= (riskDistance * params.breakEvenRr)) {
-        stopPrice = entryPrice;
-        breakEvenTriggered = true;
-      }
-
-      const stopTouched = direction === "long" ? nextBar.low <= stopPrice : nextBar.high >= stopPrice;
-      const targetTouched = direction === "long" ? nextBar.high >= takeProfit : nextBar.low <= takeProfit;
-      if (stopTouched) {
-        exitPrice = stopPrice;
-        exitIndex = j;
-        stopHit = true;
-        break;
-      }
-      if (targetTouched) {
-        exitPrice = takeProfit;
-        exitIndex = j;
-        takeProfitHit = true;
-        break;
-      }
-      exitPrice = nextBar.close;
-      exitIndex = j;
-    }
-
-    const returnPct = direction === "long"
-      ? (exitPrice / entryPrice) - 1
-      : (entryPrice / exitPrice) - 1;
-
-    trades.push({
-      assetId: dataset.assetId,
-      direction,
-      entryDate: bar.t,
-      exitDate: bars[exitIndex].t,
-      holdDays: Math.max(1, exitIndex - index),
-      entryPrice,
-      exitPrice,
-      returnPct,
-      stopHit,
-      takeProfitHit,
-      breakEvenTriggered,
-    });
-
-    index = exitIndex + 1;
-  }
-
-  const metrics = metricsFromTrades(dataset.assetId, trades);
+function toDebugZone(zone: PineZone): OptimizerDebugZone {
   return {
-    assetId: dataset.assetId,
-    trades,
-    equityCurve: metrics.equityCurve,
-    assetMetrics: {
-      assetId: dataset.assetId,
-      sharpe: metrics.sharpe,
-      cagr: metrics.cagr,
-      maxDrawdown: metrics.maxDrawdown,
-      profitFactor: metrics.profitFactor,
-      trades: metrics.trades,
-      winRate: metrics.winRate,
-    },
+    id: zone.id,
+    kind: zone.kind,
+    strength: zone.strength,
+    low: zone.low,
+    high: zone.high,
+    startIndex: zone.startIndex,
+    endIndex: zone.endIndex,
+    touched: zone.touched,
+    broken: zone.broken,
+    lastTouchedIndex: zone.lastTouchedIndex,
+  };
+}
+
+function zoneTouched(bar: OptimizerDailyBar, zone: PineZone): boolean {
+  return bar.high >= zone.low && bar.low <= zone.high;
+}
+
+function pulledBackIntoZone(previousBar: OptimizerDailyBar | null, zone: PineZone, direction: "long" | "short"): boolean {
+  if (!previousBar) return false;
+  return direction === "long"
+    ? previousBar.close > zone.high
+    : previousBar.close < zone.low;
+}
+
+function isZoneAllowed(zone: PineZone, params: StrategyParams, kind: "demand" | "supply"): boolean {
+  if (zone.kind !== kind || zone.broken) return false;
+  if (params.zoneMode === "both") return true;
+  if (params.zoneMode === "strong") return zone.strength === "strong";
+  return zone.strength === "normal";
+}
+
+function valuationSnapshotsByDate(
+  points: ReturnType<typeof buildValuationSeries>,
+  weightProfile: ValuationWeightProfile,
+): Map<string, ValuationSnapshot> {
+  const weights = WEIGHT_PROFILES[weightProfile] ?? WEIGHT_PROFILES.equal;
+  return new Map(points.map((point) => {
+    const raw = [point.compare1, point.compare2, point.compare3].filter((value): value is number => value != null && Number.isFinite(value));
+    const weightedCombined =
+      point.compare1 != null && point.compare2 != null && point.compare3 != null
+        ? (
+          (point.compare1 * weights.dxy)
+          + (point.compare2 * weights.gold)
+          + (point.compare3 * weights.us10y)
+        )
+        : null;
+    return [
+      isoDay(point.t),
+      {
+        rawMean: raw.length ? mean(raw) : null,
+        combined: point.combined ?? null,
+        weightedCombined: weightedCombined != null ? clamp(weightedCombined, -100, 100) : null,
+        compare1: point.compare1 ?? null,
+        compare2: point.compare2 ?? null,
+        compare3: point.compare3 ?? null,
+      },
+    ];
+  }));
+}
+
+function valuationModeSignal(snapshot: ValuationSnapshot | null | undefined, mode: ValuationMode): ValuationSignalState {
+  if (!snapshot) return { longPass: false, shortPass: false, signalScore: null };
+  const comparisons = [snapshot.compare1, snapshot.compare2, snapshot.compare3].filter((value): value is number => value != null && Number.isFinite(value));
+  const longHits = comparisons.filter((value) => value < -VALUATION_THRESHOLD).length;
+  const shortHits = comparisons.filter((value) => value > VALUATION_THRESHOLD).length;
+  const combined = snapshot.combined;
+  const weightedCombined = snapshot.weightedCombined;
+  const directionalScore = mode === "WEIGHTED_COMBINED"
+    ? weightedCombined
+    : mode === "COMBINED"
+      ? combined
+      : snapshot.rawMean;
+
+  switch (mode) {
+    case "ANY_SINGLE":
+      return { longPass: longHits >= 1, shortPass: shortHits >= 1, signalScore: directionalScore };
+    case "TWO_OF_THREE":
+      return { longPass: longHits >= 2, shortPass: shortHits >= 2, signalScore: directionalScore };
+    case "ALL_THREE":
+      return { longPass: longHits >= 3, shortPass: shortHits >= 3, signalScore: directionalScore };
+    case "COMBINED":
+      return {
+        longPass: combined != null && combined < -VALUATION_THRESHOLD,
+        shortPass: combined != null && combined > VALUATION_THRESHOLD,
+        signalScore: combined,
+      };
+    case "WEIGHTED_COMBINED":
+      return {
+        longPass: weightedCombined != null && weightedCombined < -VALUATION_THRESHOLD,
+        shortPass: weightedCombined != null && weightedCombined > VALUATION_THRESHOLD,
+        signalScore: weightedCombined,
+      };
+    default:
+      return { longPass: false, shortPass: false, signalScore: directionalScore };
+  }
+}
+
+function combinePeriodSignals(
+  primary: ValuationSignalState,
+  secondary: ValuationSignalState | null,
+  logic: ValuationMultiPeriodLogic,
+): ValuationSignalState {
+  if (!secondary || logic === "SINGLE") return primary;
+  if (logic === "OR") {
+    return {
+      longPass: primary.longPass || secondary.longPass,
+      shortPass: primary.shortPass || secondary.shortPass,
+      signalScore: primary.signalScore ?? secondary.signalScore,
+    };
+  }
+  if (logic === "AND") {
+    return {
+      longPass: primary.longPass && secondary.longPass,
+      shortPass: primary.shortPass && secondary.shortPass,
+      signalScore: primary.signalScore != null && secondary.signalScore != null
+        ? (primary.signalScore + secondary.signalScore) / 2
+        : primary.signalScore ?? secondary.signalScore,
+    };
+  }
+  const primaryScore = primary.signalScore ?? 0;
+  const secondaryScore = secondary.signalScore ?? 0;
+  return {
+    longPass: (primaryScore < 0 && secondaryScore < 0) && (primary.longPass || secondary.longPass),
+    shortPass: (primaryScore > 0 && secondaryScore > 0) && (primary.shortPass || secondary.shortPass),
+    signalScore: primary.signalScore != null && secondary.signalScore != null
+      ? (primary.signalScore + secondary.signalScore) / 2
+      : primary.signalScore ?? secondary.signalScore,
+  };
+}
+
+function buildTradeValidation(assetResults: AssetBacktestResult[], startDate: string, endDate: string): OptimizerTradeValidation {
+  const years = Math.max(1, (new Date(endDate).getTime() - new Date(startDate).getTime()) / (365.25 * 24 * 60 * 60 * 1000));
+  const totalTrades = assetResults.reduce((sum, result) => sum + result.trades.length, 0);
+  const minimumTotalTrades = assetResults.length * MIN_TRADES_PER_ASSET;
+  const tradesPerYear = totalTrades / years;
+  const assetTradeCounts = assetResults.map((result) => ({
+    assetId: result.assetId,
+    trades: result.trades.length,
+    minimumRequired: MIN_TRADES_PER_ASSET,
+  }));
+  const underTradedAssets = assetTradeCounts.filter((item) => item.trades < item.minimumRequired);
+  const totalInvalid = totalTrades < minimumTotalTrades;
+  const yearlyInvalid = tradesPerYear < MIN_TRADES_PER_YEAR;
+  const isValid = underTradedAssets.length === 0 && !totalInvalid && !yearlyInvalid;
+  const reason = isValid
+    ? null
+    : "Invalid Strategy (Insufficient Trade Count)";
+
+  return {
+    isValid,
+    reason,
+    minimumTradesPerAsset: MIN_TRADES_PER_ASSET,
+    minimumTotalTrades,
+    minimumTradesPerYear: MIN_TRADES_PER_YEAR,
+    totalTrades,
+    tradesPerYear,
+    assetTradeCounts,
   };
 }
 
 function compositeMetrics(results: AssetBacktestResult[]): StrategyMetrics {
   const assetMetrics = results.map((result) => result.assetMetrics);
-  const allTrades = results.flatMap((result) => result.trades);
-  const mergedCurve = buildEquityCurve(allTrades.sort((left, right) => left.exitDate.localeCompare(right.exitDate)));
+  const allTrades = results.flatMap((result) => result.trades).sort((left, right) => left.exitDate.localeCompare(right.exitDate));
+  const mergedCurve = buildEquityCurve(allTrades);
   const profitFactor = computeProfitFactor(allTrades.map((trade) => trade.returnPct));
   const sharpe = computeSharpe(allTrades.map((trade) => trade.returnPct));
   const cagr = computeCagr(mergedCurve);
@@ -467,7 +433,7 @@ function compositeMetrics(results: AssetBacktestResult[]): StrategyMetrics {
   const expectancy = allTrades.length ? mean(allTrades.map((trade) => trade.returnPct)) : 0;
   const medianAssetSharpe = median(assetMetrics.map((item) => item.sharpe));
   const portfolioSharpe = sharpe;
-  const worstAssetSharpe = Math.min(...assetMetrics.map((item) => item.sharpe));
+  const worstAssetSharpe = assetMetrics.length ? Math.min(...assetMetrics.map((item) => item.sharpe)) : 0;
   const score = (
     (sharpe * 0.30)
     + (calmar * 0.25)
@@ -495,28 +461,452 @@ function compositeMetrics(results: AssetBacktestResult[]): StrategyMetrics {
   };
 }
 
+function previewParamsFromConfig(config: OptimizerPreviewResponse["config"]): StrategyParams {
+  const zoneMode = config.toggles.allowNormalZones && config.toggles.allowStrongZones
+    ? "both"
+    : config.toggles.allowStrongZones
+      ? "strong"
+      : "normal";
+  const primaryPeriod = (config.valuationPeriods[0] ?? 10) as ValuationPeriod;
+  const secondaryPeriod = (config.valuationPeriods[1] ?? config.valuationPeriods[0] ?? null) as ValuationPeriod | null;
+  const primaryMode = config.valuationModes[0] ?? "COMBINED";
+  const secondaryMode = secondaryPeriod ? (config.valuationModes[1] ?? config.valuationModes[0] ?? "COMBINED") : null;
+
+  return {
+    zoneMode,
+    zoneLookback: Math.max(3, Math.round(config.broadRanges.zoneLookback.min)),
+    valuationPrimaryPeriod: primaryPeriod,
+    valuationSecondaryPeriod: secondaryPeriod && secondaryPeriod !== primaryPeriod ? secondaryPeriod : null,
+    valuationPrimaryMode: primaryMode,
+    valuationSecondaryMode: secondaryPeriod && secondaryPeriod !== primaryPeriod ? secondaryMode : null,
+    valuationMultiPeriodLogic: secondaryPeriod && secondaryPeriod !== primaryPeriod ? (config.valuationMultiPeriodLogics.find((logic) => logic !== "SINGLE") ?? "OR") : "SINGLE",
+    valuationWeightProfile: config.valuationWeightProfiles[0] ?? "equal",
+    valuationThreshold: VALUATION_THRESHOLD,
+    seasonalityYears: Math.max(1, Math.round((config.broadRanges.seasonalityYears.min + config.broadRanges.seasonalityYears.max) / 2)),
+    holdDays: Math.max(1, Math.round((config.broadRanges.holdDays.min + config.broadRanges.holdDays.max) / 2)),
+    stopMode: "atr",
+    atrPeriod: Math.max(2, Math.round((config.broadRanges.atrPeriod.min + config.broadRanges.atrPeriod.max) / 2)),
+    atrMultiplier: config.broadRanges.atrMultiplier.min,
+    fixedStopPct: config.broadRanges.fixedStopPct.min,
+    takeProfitRr: Math.max(0.5, config.broadRanges.takeProfitRr.min),
+    breakEvenRr: Math.max(0.25, config.broadRanges.breakEvenRr.min),
+    requireCandleConfirmation: config.toggles.requireCandleConfirmation,
+    requireValuation: true,
+    requireSeasonality: true,
+    allowLong: config.toggles.allowLong,
+    allowShort: config.toggles.allowShort,
+  };
+}
+
+function runAssetBacktest(
+  dataset: OptimizerAssetDataset,
+  params: StrategyParams,
+  references: { dxy: OptimizerReferenceSeries; gold: OptimizerReferenceSeries; us10y: OptimizerReferenceSeries },
+  integrity: OptimizerCandleIntegrityReport,
+  startDate: string,
+  endDate: string,
+): AssetBacktestResult {
+  const bars = dataset.barsD1.filter((bar) => bar.t >= startDate && bar.t <= endDate);
+  const ohlcv = toOhlcv(bars);
+  const zones = buildSupplyDemandZones(ohlcv, params.zoneLookback);
+  const atr = computeAtr(bars, params.atrPeriod);
+  const assetSeries = bars.map((bar) => ({ t: bar.t, close: bar.close }));
+  const compare1 = referenceSeriesToArray(references.dxy);
+  const compare2 = referenceSeriesToArray(references.gold);
+  const compare3 = referenceSeriesToArray(references.us10y);
+  const valuationPeriods = Array.from(new Set(
+    [params.valuationPrimaryPeriod, params.valuationSecondaryPeriod].filter((value): value is ValuationPeriod => value != null),
+  ));
+  const valuationMaps = new Map<ValuationPeriod, Map<string, ValuationSnapshot>>();
+  for (const period of valuationPeriods) {
+    const valuationSeries = buildValuationSeries(assetSeries, compare1, compare2, compare3, period, VALUATION_RESCALE_LENGTH, VALUATION_THRESHOLD, -VALUATION_THRESHOLD, "combined");
+    valuationMaps.set(period, valuationSnapshotsByDate(valuationSeries, params.valuationWeightProfile));
+  }
+  const primaryValuationMap = valuationMaps.get(params.valuationPrimaryPeriod) ?? new Map<string, ValuationSnapshot>();
+  const secondaryValuationMap = params.valuationSecondaryPeriod != null
+    ? (valuationMaps.get(params.valuationSecondaryPeriod) ?? new Map<string, ValuationSnapshot>())
+    : null;
+  const seasonality = buildSeasonalitySeries(dataset.assetId, bars, params.holdDays, params.seasonalityYears);
+
+  const trades: TradeRecord[] = [];
+  const signals: OptimizerDebugSignal[] = [];
+  const seasonalityWindows: OptimizerSeasonalityWindow[] = [];
+  let candidateSignalCount = 0;
+  let qualifyingSignalCount = 0;
+  const requiredSeasonalitySamples = Math.max(3, Math.min(5, params.seasonalityYears));
+  const firstValuationIndex = bars.findIndex((candidate) => {
+    const candidateDay = isoDay(candidate.t);
+    return primaryValuationMap.get(candidateDay) != null
+      && (secondaryValuationMap == null || secondaryValuationMap.get(candidateDay) != null);
+  });
+  const firstSeasonalityIndex = seasonality.findIndex((point) => point.samples >= requiredSeasonalitySamples);
+  const startIndex = Math.max(
+    params.zoneLookback + 3,
+    Math.max(1, params.atrPeriod),
+    firstValuationIndex >= 0 ? firstValuationIndex : bars.length,
+    firstSeasonalityIndex >= 0 ? firstSeasonalityIndex : bars.length,
+  );
+
+  let index = startIndex;
+  while (index < bars.length - Math.max(2, params.holdDays)) {
+    const bar = bars[index];
+    const previousBar = index > 0 ? bars[index - 1] : null;
+    const barDay = isoDay(bar.t);
+    const candleBull = bar.close > bar.open;
+    const candleBear = bar.close < bar.open;
+    const primarySnapshot = primaryValuationMap.get(barDay) ?? null;
+    const secondarySnapshot = secondaryValuationMap?.get(barDay) ?? null;
+    const primaryValuationSignal = valuationModeSignal(primarySnapshot, params.valuationPrimaryMode);
+    const secondaryValuationSignal = secondarySnapshot && params.valuationSecondaryMode
+      ? valuationModeSignal(secondarySnapshot, params.valuationSecondaryMode)
+      : null;
+    const valuationSignal = combinePeriodSignals(
+      primaryValuationSignal,
+      secondaryValuationSignal,
+      params.valuationMultiPeriodLogic,
+    );
+    const valuationPassLong = valuationSignal.longPass;
+    const valuationPassShort = valuationSignal.shortPass;
+    const seasonPoint = seasonality[index] ?? { expectedReturn: 0, direction: "neutral" as const, samples: 0 };
+    const seasonalityPassLong = seasonPoint.samples >= requiredSeasonalitySamples && seasonPoint.direction === "long";
+    const seasonalityPassShort = seasonPoint.samples >= requiredSeasonalitySamples && seasonPoint.direction === "short";
+    const activeZones = zones.filter((zone) => zone.startIndex < index && zone.endIndex >= index && !zone.broken);
+    const activeDemandZones = activeZones.filter((zone) => (
+      isZoneAllowed(zone, params, "demand")
+      && zoneTouched(bar, zone)
+      && pulledBackIntoZone(previousBar, zone, "long")
+    ));
+    const activeSupplyZones = activeZones.filter((zone) => (
+      isZoneAllowed(zone, params, "supply")
+      && zoneTouched(bar, zone)
+      && pulledBackIntoZone(previousBar, zone, "short")
+    ));
+    const longZone = activeDemandZones.sort((left, right) => {
+      if (left.strength !== right.strength) return left.strength === "strong" ? -1 : 1;
+      return (right.lastTouchedIndex ?? -1) - (left.lastTouchedIndex ?? -1);
+    })[0] ?? null;
+    const shortZone = activeSupplyZones.sort((left, right) => {
+      if (left.strength !== right.strength) return left.strength === "strong" ? -1 : 1;
+      return (right.lastTouchedIndex ?? -1) - (left.lastTouchedIndex ?? -1);
+    })[0] ?? null;
+    const baseLongSignal =
+      params.allowLong
+      && Boolean(longZone)
+      && (!params.requireCandleConfirmation || candleBull)
+      && (!params.requireSeasonality || seasonalityPassLong);
+    const baseShortSignal =
+      params.allowShort
+      && Boolean(shortZone)
+      && (!params.requireCandleConfirmation || candleBear)
+      && (!params.requireSeasonality || seasonalityPassShort);
+
+    candidateSignalCount += (baseLongSignal ? 1 : 0) + (baseShortSignal ? 1 : 0);
+
+    const longSignal =
+      baseLongSignal
+      && (!params.requireValuation || valuationPassLong)
+      && primaryValuationSignal.signalScore != null;
+    const shortSignal =
+      baseShortSignal
+      && (!params.requireValuation || valuationPassShort)
+      && primaryValuationSignal.signalScore != null;
+
+    if (!longSignal && !shortSignal) {
+      index += 1;
+      continue;
+    }
+    if (longSignal && shortSignal) {
+      index += 1;
+      continue;
+    }
+
+    qualifyingSignalCount += 1;
+    const direction: "long" | "short" = longSignal ? "long" : "short";
+    const activeZone = longSignal ? longZone : shortZone;
+    const entryPrice = bar.close;
+    const atrDistance = Math.max(atr[index], entryPrice * 0.002);
+    const riskDistance = params.stopMode === "atr"
+      ? atrDistance * params.atrMultiplier
+      : entryPrice * (params.fixedStopPct / 100);
+    const initialStop = direction === "long" ? entryPrice - riskDistance : entryPrice + riskDistance;
+    const takeProfit = direction === "long"
+      ? entryPrice + (riskDistance * params.takeProfitRr)
+      : entryPrice - (riskDistance * params.takeProfitRr);
+
+    signals.push({
+      assetId: dataset.assetId,
+      barIndex: index,
+      time: bar.t,
+      direction,
+      zoneId: activeZone?.id ?? null,
+      valuationScorePrimary: primaryValuationSignal.signalScore,
+      valuationScoreSecondary: secondaryValuationSignal?.signalScore ?? null,
+      valuationPass: direction === "long" ? valuationPassLong : valuationPassShort,
+      seasonalityPass: direction === "long" ? seasonalityPassLong : seasonalityPassShort,
+      seasonalityDirection: seasonPoint.direction,
+      seasonalityScore: seasonPoint.expectedReturn,
+      candleConfirmation: direction === "long" ? candleBull : candleBear,
+    });
+    seasonalityWindows.push({
+      startIndex: index,
+      endIndex: Math.min(bars.length - 1, index + params.holdDays),
+      direction,
+      score: seasonPoint.expectedReturn,
+      holdDays: params.holdDays,
+    });
+
+    let stopPrice = initialStop;
+    let exitPrice = bars[Math.min(bars.length - 1, index + params.holdDays)].close;
+    let exitIndex = Math.min(bars.length - 1, index + params.holdDays);
+    let stopHit = false;
+    let takeProfitHit = false;
+    let breakEvenTriggered = false;
+    let exitReason: TradeRecord["exitReason"] = "time";
+
+    for (let j = index + 1; j <= Math.min(bars.length - 1, index + params.holdDays); j += 1) {
+      const nextBar = bars[j];
+      const favorableMove = direction === "long" ? nextBar.high - entryPrice : entryPrice - nextBar.low;
+      if (!breakEvenTriggered && favorableMove >= (riskDistance * params.breakEvenRr)) {
+        stopPrice = entryPrice;
+        breakEvenTriggered = true;
+      }
+
+      const stopTouched = direction === "long" ? nextBar.low <= stopPrice : nextBar.high >= stopPrice;
+      const targetTouched = direction === "long" ? nextBar.high >= takeProfit : nextBar.low <= takeProfit;
+      if (stopTouched) {
+        exitPrice = stopPrice;
+        exitIndex = j;
+        stopHit = true;
+        exitReason = "stop";
+        break;
+      }
+      if (targetTouched) {
+        exitPrice = takeProfit;
+        exitIndex = j;
+        takeProfitHit = true;
+        exitReason = "target";
+        break;
+      }
+      exitPrice = nextBar.close;
+      exitIndex = j;
+    }
+
+    const returnPct = direction === "long"
+      ? (exitPrice / entryPrice) - 1
+      : (entryPrice / exitPrice) - 1;
+
+    trades.push({
+      assetId: dataset.assetId,
+      direction,
+      entryDate: bar.t,
+      exitDate: bars[exitIndex].t,
+      entryIndex: index,
+      exitIndex,
+      holdDays: Math.max(1, exitIndex - index),
+      entryPrice,
+      exitPrice,
+      stopPrice: initialStop,
+      takeProfitPrice: takeProfit,
+      returnPct,
+      stopHit,
+      takeProfitHit,
+      breakEvenTriggered,
+      exitReason,
+    });
+
+    index = exitIndex + 1;
+  }
+
+  const metrics = metricsFromTrades(dataset.assetId, trades);
+  const valuationWindows = bars.map((bar, barIndex) => {
+    const barDay = isoDay(bar.t);
+    const primarySignal = valuationModeSignal(primaryValuationMap.get(barDay) ?? null, params.valuationPrimaryMode);
+    const secondarySignal = secondaryValuationMap && params.valuationSecondaryMode
+      ? valuationModeSignal(secondaryValuationMap.get(barDay) ?? null, params.valuationSecondaryMode)
+      : null;
+    const combinedSignal = combinePeriodSignals(primarySignal, secondarySignal, params.valuationMultiPeriodLogic);
+    return {
+      barIndex,
+      time: bar.t,
+      valuationScorePrimary: primarySignal.signalScore,
+      valuationScoreSecondary: secondarySignal?.signalScore ?? null,
+      longPass: combinedSignal.longPass,
+      shortPass: combinedSignal.shortPass,
+    };
+  });
+  const contributionReturn = trades.reduce((sum, trade) => sum + trade.returnPct, 0);
+
+  return {
+    assetId: dataset.assetId,
+    trades,
+    equityCurve: metrics.equityCurve,
+    assetMetrics: {
+      assetId: dataset.assetId,
+      sharpe: metrics.sharpe,
+      cagr: metrics.cagr,
+      maxDrawdown: metrics.maxDrawdown,
+      profitFactor: metrics.profitFactor,
+      trades: metrics.trades,
+      winRate: metrics.winRate,
+    },
+    debugAsset: {
+      assetId: dataset.assetId,
+      symbol: dataset.symbol,
+      candles: bars,
+      zones: zones.map(toDebugZone),
+      signals,
+      valuationWindows,
+      seasonalityWindows,
+      trades,
+      integrity,
+    },
+    valuation: {
+      periods: valuationPeriods,
+      primaryPeriod: params.valuationPrimaryPeriod,
+      secondaryPeriod: params.valuationSecondaryPeriod,
+      primaryMode: params.valuationPrimaryMode,
+      secondaryMode: params.valuationSecondaryMode,
+      multiPeriodLogic: params.valuationMultiPeriodLogic,
+      weightProfile: params.valuationWeightProfile,
+      threshold: VALUATION_THRESHOLD,
+      signalDensity: bars.length ? qualifyingSignalCount / bars.length : 0,
+      candidateSignals: candidateSignalCount,
+      qualifyingSignals: qualifyingSignalCount,
+      contributionReturn,
+    },
+  };
+}
+
+export function buildOptimizerPreview(
+  config: OptimizerPreviewResponse["config"],
+  data: OptimizerLoadedData,
+  selectedAssetId: OptimizerAssetId,
+): OptimizerPreviewResponse {
+  const asset = data.assets.find((item) => item.assetId === selectedAssetId) ?? data.assets[0] ?? null;
+  const integrityMap = new Map(data.integrity.map((item) => [item.assetId, item]));
+  const previewAsset = asset
+    ? runAssetBacktest(
+        asset,
+        previewParamsFromConfig(config),
+        data.references,
+        integrityMap.get(asset.assetId) ?? {
+          assetId: asset.assetId,
+          symbol: asset.symbol,
+          candleCount: asset.barsD1.length,
+          invalidHighLowCount: 0,
+          flatRangeCount: 0,
+          openEqualsCloseCount: 0,
+          invalidHighLowRatio: 0,
+          flatRangeRatio: 0,
+          openEqualsCloseRatio: 0,
+          warnings: [],
+          isValid: true,
+        },
+        asset.barsD1[0]?.t ?? "2012-01-01T00:00:00Z",
+        asset.barsD1[asset.barsD1.length - 1]?.t ?? "2025-12-31T00:00:00Z",
+      ).debugAsset
+    : null;
+
+  return {
+    generatedAt: new Date().toISOString(),
+    config,
+    coverage: data.coverage,
+    integrity: data.integrity,
+    selectedAssetId: asset?.assetId ?? selectedAssetId,
+    previewAsset,
+    warnings: data.warnings,
+    requiresConfirmation: data.integrity.some((item) => !item.isValid),
+  };
+}
+
 export function evaluateStrategyCandidate(
   params: StrategyParams,
   datasets: OptimizerAssetDataset[],
-  references: { dxy: OptimizerReferenceSeries; gold: OptimizerReferenceSeries; us30y: OptimizerReferenceSeries },
+  references: { dxy: OptimizerReferenceSeries; gold: OptimizerReferenceSeries; us10y: OptimizerReferenceSeries },
+  integrityReports: OptimizerCandleIntegrityReport[],
   startDate: string,
   endDate: string,
   options?: { enforceFilters?: boolean },
-): Omit<OptimizerStrategyResult, "rank" | "stage" | "strategyId" | "monteCarlo"> | null {
-  const assetResults = datasets.map((dataset) => runAssetBacktest(dataset, params, references, startDate, endDate));
+): OptimizerStrategyEvaluation {
+  const integrityMap = new Map(integrityReports.map((item) => [item.assetId, item]));
+  const assetResults = datasets.map((dataset) =>
+    runAssetBacktest(
+      dataset,
+      {
+        ...params,
+        valuationThreshold: VALUATION_THRESHOLD,
+        requireValuation: true,
+        requireSeasonality: true,
+      },
+      references,
+      integrityMap.get(dataset.assetId) ?? {
+        assetId: dataset.assetId,
+        symbol: dataset.symbol,
+        candleCount: dataset.barsD1.length,
+        invalidHighLowCount: 0,
+        flatRangeCount: 0,
+        openEqualsCloseCount: 0,
+        invalidHighLowRatio: 0,
+        flatRangeRatio: 0,
+        openEqualsCloseRatio: 0,
+        warnings: [],
+        isValid: true,
+      },
+      startDate,
+      endDate,
+    ),
+  );
+  const validation = buildTradeValidation(assetResults, startDate, endDate);
   const metrics = compositeMetrics(assetResults);
+  const result = {
+    params: {
+      ...params,
+      valuationThreshold: VALUATION_THRESHOLD,
+      requireValuation: true,
+      requireSeasonality: true,
+    },
+    valuation: {
+      periods: Array.from(new Set(assetResults.flatMap((item) => item.valuation.periods))),
+      primaryPeriod: params.valuationPrimaryPeriod,
+      secondaryPeriod: params.valuationSecondaryPeriod,
+      primaryMode: params.valuationPrimaryMode,
+      secondaryMode: params.valuationSecondaryMode,
+      multiPeriodLogic: params.valuationMultiPeriodLogic,
+      weightProfile: params.valuationWeightProfile,
+      threshold: VALUATION_THRESHOLD,
+      signalDensity: mean(assetResults.map((item) => item.valuation.signalDensity)),
+      candidateSignals: assetResults.reduce((sum, item) => sum + item.valuation.candidateSignals, 0),
+      qualifyingSignals: assetResults.reduce((sum, item) => sum + item.valuation.qualifyingSignals, 0),
+      contributionReturn: assetResults.reduce((sum, item) => sum + item.valuation.contributionReturn, 0),
+    },
+    metrics,
+    assetMetrics: assetResults.map((item) => item.assetMetrics),
+    equityCurve: buildEquityCurve(assetResults.flatMap((item) => item.trades).sort((left, right) => left.exitDate.localeCompare(right.exitDate))),
+    trades: assetResults.flatMap((item) => item.trades),
+    validation,
+    debugAssets: assetResults.map((item) => item.debugAsset),
+  };
+
+  if (!validation.isValid) {
+    return {
+      status: "invalid_trade_count",
+      result,
+    };
+  }
+
   const enforceFilters = options?.enforceFilters ?? true;
   if (
     enforceFilters
-    && (metrics.trades <= 150 || metrics.sharpe <= 1.2 || metrics.profitFactor <= 1.3 || metrics.maxDrawdown >= 0.35)
+    && (metrics.sharpe <= 1.2 || metrics.profitFactor <= 1.3 || metrics.maxDrawdown >= 0.35)
   ) {
-    return null;
+    return {
+      status: "rejected",
+      result,
+    };
   }
+
   return {
-    params,
-    metrics,
-    assetMetrics: assetResults.map((result) => result.assetMetrics),
-    equityCurve: buildEquityCurve(assetResults.flatMap((result) => result.trades).sort((left, right) => left.exitDate.localeCompare(right.exitDate))),
-    trades: assetResults.flatMap((result) => result.trades),
+    status: "valid",
+    result,
   };
 }

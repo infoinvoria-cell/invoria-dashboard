@@ -11,7 +11,7 @@ const FX_ASSETS = [
   "cross_nzdusd",
 ];
 
-const REFERENCES = ["DXY", "GC1!", "ZB1!"];
+const REFERENCES = ["DXY", "GC1!", "^TNX"];
 
 function parseArgs(argv) {
   const args = {};

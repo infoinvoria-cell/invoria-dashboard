@@ -18,8 +18,11 @@ import {
 } from "lightweight-charts";
 
 import { GlobeApi } from "../../../lib/api";
-import { sanitizeOhlcvSeries } from "../../../lib/ohlcv";
-import { getSeasonDirection, normalizedSeasonalityCurve, seasonTone } from "../../../lib/seasonality";
+import { filterValidOhlcvSeries } from "../../../lib/candleIntegrity";
+import { buildGlobeSeasonalityAnalysis } from "../../../lib/globeSeasonality";
+import { seasonTone } from "../../../lib/seasonality";
+import { buildSupplyDemandZones } from "../../../lib/screener/supplyDemand";
+import type { PineZone } from "../../../lib/screener/types";
 import type { EvaluationResponse, SeasonalityResponse, TimeseriesResponse } from "../../../types";
 
 type Props = {
@@ -41,6 +44,7 @@ type Props = {
 
 type ZoneRect = {
   kind: "demand" | "supply";
+  strength: "normal" | "strong";
   left: number;
   width: number;
   top: number;
@@ -51,13 +55,19 @@ type ZoneRect = {
 
 type CandleBar = { time: UTCTimestamp; open: number; high: number; low: number; close: number };
 
-type EvalFlags = { over: boolean; under: boolean };
+type EvalFlags = { longOk: boolean; shortOk: boolean };
 
-type ZoneRuntime = {
-  start: number;
-  end: number;
-  low: number;
-  high: number;
+type ZoneRuntime = PineZone & {
+  startTs: number;
+  endTs: number;
+};
+
+type SeasonalOverlay = {
+  left: number;
+  width: number;
+  entryX: number;
+  exitX: number;
+  color: string;
 };
 
 type TimeframeKey = "M" | "W" | "D" | "4H" | "1H";
@@ -65,7 +75,6 @@ type ContinuousMode = "regular" | "backadjusted";
 
 const VAL_HIGH = 75;
 const VAL_LOW = -75;
-const SIGNAL_LOOKBACK = 2;
 const TIMEFRAME_BARS: Record<TimeframeKey, number> = {
   M: 100,
   W: 100,
@@ -82,81 +91,14 @@ const TF_SECONDS_FALLBACK: Record<TimeframeKey, number> = {
   "1H": 60 * 60,
 };
 
-function overlap1d(a0: number, a1: number, b0: number, b1: number): number {
-  return Math.max(0, Math.min(a1, b1) - Math.max(a0, b0));
-}
-
-function resolveZoneOverlaps(input: ZoneRect[], heightLimit: number): ZoneRect[] {
-  if (!input.length) return [];
-
-  const merged: ZoneRect[] = [];
-  const sameKind = [...input].sort((a, b) => (a.kind === b.kind ? a.top - b.top : a.kind.localeCompare(b.kind)));
-  for (const zone of sameKind) {
-    const right = zone.left + zone.width;
-    const bottom = zone.top + zone.height;
-    const target = merged.find((m) => {
-      if (m.kind !== zone.kind) return false;
-      const mRight = m.left + m.width;
-      const mBottom = m.top + m.height;
-      const xOverlap = overlap1d(zone.left, right, m.left, mRight);
-      const yOverlap = overlap1d(zone.top, bottom, m.top, mBottom);
-      const minX = Math.max(1, Math.min(zone.width, m.width));
-      const minY = Math.max(1, Math.min(zone.height, m.height));
-      return xOverlap / minX > 0.35 && yOverlap / minY > 0.35;
-    });
-
-    if (!target) {
-      merged.push({ ...zone });
-      continue;
-    }
-
-    const targetRight = target.left + target.width;
-    const targetBottom = target.top + target.height;
-    const nextLeft = Math.min(target.left, zone.left);
-    const nextRight = Math.max(targetRight, right);
-    const nextTop = Math.min(target.top, zone.top);
-    const nextBottom = Math.max(targetBottom, bottom);
-    target.left = nextLeft;
-    target.width = Math.max(4, nextRight - nextLeft);
-    target.top = Math.max(0, nextTop);
-    target.height = Math.max(1, Math.min(heightLimit, nextBottom) - target.top);
-  }
-
-  // If supply and demand still collide, separate them slightly for readability.
-  for (let i = 0; i < merged.length; i += 1) {
-    for (let j = i + 1; j < merged.length; j += 1) {
-      const a = merged[i];
-      const b = merged[j];
-      if (a.kind === b.kind) continue;
-      const ax1 = a.left + a.width;
-      const ay1 = a.top + a.height;
-      const bx1 = b.left + b.width;
-      const by1 = b.top + b.height;
-      const xOverlap = overlap1d(a.left, ax1, b.left, bx1);
-      const yOverlap = overlap1d(a.top, ay1, b.top, by1);
-      const minArea = Math.max(1, Math.min(a.width * a.height, b.width * b.height));
-      const overlapArea = xOverlap * yOverlap;
-      if (overlapArea / minArea < 0.22) continue;
-
-      const shift = 5;
-      if (a.kind === "supply") {
-        a.top = Math.max(0, a.top - shift);
-      } else {
-        a.top = Math.min(Math.max(0, heightLimit - a.height), a.top + shift);
-      }
-      if (b.kind === "supply") {
-        b.top = Math.max(0, b.top - shift);
-      } else {
-        b.top = Math.min(Math.max(0, heightLimit - b.height), b.top + shift);
-      }
-    }
-  }
-
-  return merged;
-}
-
 function toTs(value: string): UTCTimestamp {
   return Math.floor(new Date(value).getTime() / 1000) as UTCTimestamp;
+}
+
+function dayKeyFromTs(value: string | number): string {
+  const date = typeof value === "number" ? new Date(value * 1000) : new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toISOString().slice(0, 10);
 }
 
 function hexToRgba(hex: string, alpha: number): string {
@@ -189,21 +131,20 @@ function buildEvalFlagsMap(evaluation: EvaluationResponse | null): Map<number, E
   for (const row of evaluation.series) {
     if (!isCoreValuationLabel(row.label)) continue;
     for (const pt of row.points ?? []) {
-      const values = [pt.v10, pt.v20]
-        .map((v) => Number(v))
-        .filter((v) => Number.isFinite(v));
-      if (!values.length) continue;
+      const v10 = Number(pt.v10);
+      const v20 = Number(pt.v20);
+      if (!Number.isFinite(v10) || !Number.isFinite(v20)) continue;
       const ts = Number(toTs(pt.t));
-      const current = map.get(ts) ?? { over: false, under: false };
-      if (values.some((v) => v > VAL_HIGH)) current.over = true;
-      if (values.some((v) => v < VAL_LOW)) current.under = true;
+      const current = map.get(ts) ?? { longOk: false, shortOk: false };
+      if (v10 < VAL_LOW && v20 < VAL_LOW) current.longOk = true;
+      if (v10 > VAL_HIGH && v20 > VAL_HIGH) current.shortOk = true;
       map.set(ts, current);
     }
   }
   return map;
 }
 
-function buildZoneRuntime(zones: Array<{ start: string; end: string; low: number; high: number }>): ZoneRuntime[] {
+function buildZoneRuntime(zones: PineZone[]): ZoneRuntime[] {
   return zones
     .map((z) => {
       const start = Number(toTs(String(z.start)));
@@ -212,8 +153,9 @@ function buildZoneRuntime(zones: Array<{ start: string; end: string; low: number
       const high = Number(z.high);
       if (![start, end, low, high].every(Number.isFinite)) return null;
       return {
-        start: Math.min(start, end),
-        end: Math.max(start, end),
+        ...z,
+        startTs: Math.min(start, end),
+        endTs: Math.max(start, end),
         low: Math.min(low, high),
         high: Math.max(low, high),
       };
@@ -221,51 +163,46 @@ function buildZoneRuntime(zones: Array<{ start: string; end: string; low: number
     .filter((z): z is ZoneRuntime => z !== null);
 }
 
-function touchesAnyZone(bar: CandleBar, zones: ZoneRuntime[]): boolean {
-  const t = Number(bar.time);
-  for (const z of zones) {
-    if (t < z.start || t > z.end) continue;
-    if (bar.high >= z.low && bar.low <= z.high) return true;
-  }
-  return false;
-}
-
 function buildSignalMarkers(
   bars: CandleBar[],
   evaluation: EvaluationResponse | null,
-  demandZones: ZoneRuntime[],
-  supplyZones: ZoneRuntime[],
+  zones: ZoneRuntime[],
+  seasonalityDirection: "LONG" | "SHORT" | "NEUTRAL",
+  seasonalityHasEdge: boolean,
 ): SeriesMarker<Time>[] {
   if (!bars.length) return [];
   const evalFlags = buildEvalFlagsMap(evaluation);
   if (!evalFlags.size) return [];
 
-  const overAt = bars.map((bar) => Boolean(evalFlags.get(Number(bar.time))?.over));
-  const underAt = bars.map((bar) => Boolean(evalFlags.get(Number(bar.time))?.under));
-  const demandTouchAt = bars.map((bar) => touchesAnyZone(bar, demandZones));
-  const supplyTouchAt = bars.map((bar) => touchesAnyZone(bar, supplyZones));
-
   const markers: SeriesMarker<Time>[] = [];
-  let prevSell = false;
-  let prevBuy = false;
+  let lastDirection = "";
 
   for (let i = 0; i < bars.length; i += 1) {
-    const from = Math.max(0, i - SIGNAL_LOOKBACK);
-    let overRecent = false;
-    let underRecent = false;
-    let demandRecent = false;
-    let supplyRecent = false;
-    for (let j = from; j <= i; j += 1) {
-      overRecent = overRecent || overAt[j];
-      underRecent = underRecent || underAt[j];
-      demandRecent = demandRecent || demandTouchAt[j];
-      supplyRecent = supplyRecent || supplyTouchAt[j];
-    }
+    const dayFlags = evalFlags.get(Number(bars[i].time)) ?? evalFlags.get(Number(toTs(`${dayKeyFromTs(Number(bars[i].time))}T00:00:00Z`)));
+    const previous = bars[i - 1];
+    const longZone = zones.find((zone) =>
+      zone.kind === "demand"
+      && zone.startIndex < i
+      && i <= zone.endIndex
+      && bars[i].high >= zone.low
+      && bars[i].low <= zone.high
+      && previous
+      && previous.close > zone.high,
+    );
+    const shortZone = zones.find((zone) =>
+      zone.kind === "supply"
+      && zone.startIndex < i
+      && i <= zone.endIndex
+      && bars[i].high >= zone.low
+      && bars[i].low <= zone.high
+      && previous
+      && previous.close < zone.low,
+    );
 
-    const sellActive = overRecent && supplyRecent;
-    const buyActive = underRecent && demandRecent;
+    const longActive = Boolean(dayFlags?.longOk) && Boolean(longZone) && seasonalityHasEdge && seasonalityDirection === "LONG";
+    const shortActive = Boolean(dayFlags?.shortOk) && Boolean(shortZone) && seasonalityHasEdge && seasonalityDirection === "SHORT";
 
-    if (sellActive && !prevSell) {
+    if (shortActive && lastDirection !== "short") {
       markers.push({
         time: bars[i].time,
         position: "aboveBar",
@@ -273,7 +210,7 @@ function buildSignalMarkers(
         color: "#ff384c",
       });
     }
-    if (buyActive && !prevBuy) {
+    if (longActive && lastDirection !== "long") {
       markers.push({
         time: bars[i].time,
         position: "belowBar",
@@ -282,15 +219,13 @@ function buildSignalMarkers(
       });
     }
 
-    prevSell = sellActive;
-    prevBuy = buyActive;
+    lastDirection = longActive ? "long" : shortActive ? "short" : "";
   }
 
   return markers.slice(-120);
 }
 
-function seasonHorizonDays(seasonality?: SeasonalityResponse | null): number {
-  const horizonRaw = Number(seasonality?.stats?.bestHorizonDays ?? seasonality?.projectionDays ?? 20);
+function seasonHorizonDays(horizonRaw: number): number {
   return Math.max(1, Math.min(60, Number.isFinite(horizonRaw) ? Math.round(horizonRaw) : 20));
 }
 
@@ -333,33 +268,16 @@ function interpolateCurvePct(curve: Array<{ x: number; y: number }>, dayX: numbe
 function buildSeasonProjection(
   bars: CandleBar[],
   timeframe: TimeframeKey,
-  seasonality?: SeasonalityResponse | null,
+  curve: Array<{ x: number; y: number }>,
+  horizonRaw: number,
 ): Array<{ time: UTCTimestamp; value: number }> {
-  if (!bars.length || !seasonality) return [];
+  if (!bars.length || !curve.length) return [];
   const last = bars[bars.length - 1];
-  const horizon = seasonHorizonDays(seasonality);
+  const horizon = seasonHorizonDays(horizonRaw);
   const stepSec = Math.max(60, Math.round(inferBarStepSeconds(timeframe, bars)));
   if (!Number.isFinite(last.close) || last.close <= 0) return [];
 
-  const curve = normalizedSeasonalityCurve(seasonality);
   const maxSec = horizon * 24 * 60 * 60;
-
-  const points: Array<{ time: UTCTimestamp; value: number }> = [];
-  if (!curve.length) {
-    const avgReturnPct = Number(seasonality.stats?.avgReturn20d ?? 0);
-    if (!Number.isFinite(avgReturnPct)) return [];
-    const steps = Math.max(1, Math.ceil(maxSec / stepSec));
-    for (let k = 0; k <= steps; k += 1) {
-      const elapsedSec = Math.min(maxSec, k * stepSec);
-      const t = (Number(last.time) + elapsedSec) as UTCTimestamp;
-      const ratio = maxSec > 0 ? elapsedSec / maxSec : 0;
-      const pct = avgReturnPct * ratio;
-      const v = Number(last.close) * (1 + pct / 100);
-      if (Number.isFinite(v)) points.push({ time: t, value: v });
-    }
-    return points;
-  }
-
   const usable = curve
     .filter((p) => Number.isFinite(Number(p.x)) && Number.isFinite(Number(p.y)))
     .map((p) => ({ x: Number(p.x), y: Number(p.y) }))
@@ -367,6 +285,7 @@ function buildSeasonProjection(
     .sort((a, b) => a.x - b.x);
   if (!usable.length) return [];
 
+  const points: Array<{ time: UTCTimestamp; value: number }> = [];
   const steps = Math.max(1, Math.ceil(maxSec / stepSec));
   for (let k = 0; k <= steps; k += 1) {
     const elapsedSec = Math.min(maxSec, k * stepSec);
@@ -430,10 +349,12 @@ export default function CandleChart({
   const stagedKeyRef = useRef("");
   const dataLenRef = useRef(0);
   const currentBarsRef = useRef<CandleBar[]>([]);
+  const projectionRef = useRef<Array<{ time: UTCTimestamp; value: number }>>([]);
   const [timeframe, setTimeframe] = useState<TimeframeKey>("D");
-  const [showHistoricalZones, setShowHistoricalZones] = useState(true);
+  const [showZones, setShowZones] = useState(true);
   const [showSignals, setShowSignals] = useState(true);
   const [zones, setZones] = useState<ZoneRect[]>([]);
+  const [seasonOverlay, setSeasonOverlay] = useState<SeasonalOverlay | null>(null);
   const [continuousMode, setContinuousMode] = useState<ContinuousMode>("regular");
   const [tfPayloads, setTfPayloads] = useState<Record<string, TimeseriesResponse | null>>({});
   const [tfLoading, setTfLoading] = useState(false);
@@ -487,6 +408,12 @@ export default function CandleChart({
     if (timeframe === "D" && continuousMode === "backadjusted") return payload;
     return tfPayloads[tfPayloadKey] ?? payload;
   }, [continuousMode, payload, tfPayloadKey, tfPayloads, timeframe]);
+  const seasonalityAnalysis = useMemo(
+    () => buildGlobeSeasonalityAnalysis(payload?.ohlcv ?? activePayload?.ohlcv ?? [], seasonality),
+    [activePayload?.ohlcv, payload?.ohlcv, seasonality],
+  );
+  const seasonalityDirection = seasonalityAnalysis.stats.direction;
+  const seasonalityHasEdge = seasonalityAnalysis.stats.interpretation !== "No seasonal edge";
 
   useEffect(() => {
     const assetId = String(payload?.assetId ?? "").trim();
@@ -628,6 +555,7 @@ export default function CandleChart({
       projectionSeriesRef.current = null;
       signalMarkersRef.current = null;
       setZones([]);
+      setSeasonOverlay(null);
     };
   }, [candleDownColor, candleUpColor, onTimeRangeChange]);
 
@@ -649,32 +577,29 @@ export default function CandleChart({
       loopAnimFrameRef.current = null;
     }
 
-    const fullBars = sanitizeOhlcvSeries(activePayload?.ohlcv ?? [])
-      .slice(-500)
-      .map((row) => {
-        const open = Number(row.open);
-        const close = Number(row.close);
-        const highRaw = Number(row.high);
-        const lowRaw = Number(row.low);
-        if (![open, close, highRaw, lowRaw].every(Number.isFinite)) return null;
-        const high = Math.max(highRaw, open, close);
-        const low = Math.min(lowRaw, open, close);
-        return {
-          time: toTs(row.t),
-          open,
-          high,
-          low,
-          close,
-        };
-      })
-      .filter((row): row is CandleBar => row !== null);
+    const strictRows = filterValidOhlcvSeries(activePayload?.ohlcv ?? []).slice(-500);
+    const fullBars = strictRows
+      .map((row) => ({
+        time: toTs(row.t),
+        open: Number(row.open),
+        high: Number(row.high),
+        low: Number(row.low),
+        close: Number(row.close),
+      }))
+      .filter((row): row is CandleBar => [row.open, row.high, row.low, row.close].every(Number.isFinite));
     const fastBars = fullBars.slice(-100);
-    const demandRuntime = buildZoneRuntime(activePayload?.supplyDemand?.demand ?? []);
-    const supplyRuntime = buildZoneRuntime(activePayload?.supplyDemand?.supply ?? []);
+    const computedZones = showZones ? buildZoneRuntime(buildSupplyDemandZones(strictRows, 3)) : [];
+    const enabledZones = computedZones;
 
     const applySignalsAndProjection = (bars: CandleBar[]) => {
       if (showSignals) {
-        const markers = buildSignalMarkers(bars, evaluation, demandRuntime, supplyRuntime);
+        const markers = buildSignalMarkers(
+          bars,
+          evaluation,
+          enabledZones,
+          seasonalityDirection,
+          seasonalityHasEdge,
+        );
         signalMarkers.setMarkers(markers);
         if (onRecentSignalChange) {
           const minIdx = Math.max(0, bars.length - 3);
@@ -685,7 +610,6 @@ export default function CandleChart({
             const bearish = String(latest.position || "").toLowerCase().includes("above");
             const trend = String(activePayload?.indicators?.trend ?? "Neutral");
             const trendBull = trend.toLowerCase().startsWith("bull");
-            const sDir = getSeasonDirection(seasonality);
             const markerTime = Number(latest.time);
             let ageBars = 0;
             for (let i = bars.length - 1; i >= 0; i -= 1) {
@@ -699,14 +623,14 @@ export default function CandleChart({
               ageBars,
               lines: bearish
                 ? [
-                    "Bearish rejection near supply zone",
-                    sDir === "SHORT" ? "Seasonality turning negative" : "Seasonality mixed",
-                    trendBull ? "Momentum fading" : "Momentum breakdown",
+                    "Bearish supply retest with full valuation confirmation",
+                    seasonalityDirection === "SHORT" && seasonalityHasEdge ? "Dominant seasonality is bearish" : "Seasonality filter not aligned",
+                    trendBull ? "Momentum losing traction" : "Momentum already weakening",
                   ]
                 : [
-                    "Bullish reversal at demand zone",
-                    sDir === "LONG" ? "Seasonality turning positive" : "Seasonality mixed",
-                    trendBull ? "Momentum breakout" : "Momentum stabilizing",
+                    "Bullish demand retest with full valuation confirmation",
+                    seasonalityDirection === "LONG" && seasonalityHasEdge ? "Dominant seasonality is bullish" : "Seasonality filter not aligned",
+                    trendBull ? "Momentum trend supportive" : "Momentum stabilizing from pullback",
                   ],
             });
           } else {
@@ -718,14 +642,23 @@ export default function CandleChart({
         onRecentSignalChange?.(null);
       }
 
-      const projection = buildSeasonProjection(bars, timeframe, seasonality);
+      const projection = buildSeasonProjection(
+        bars,
+        timeframe,
+        seasonalityAnalysis.curve,
+        seasonalityAnalysis.stats.bestHorizonDays,
+      );
+      projectionRef.current = projection;
       if (!projection.length) {
         projectionSeries.setData([]);
         return;
       }
 
-      const dir = getSeasonDirection(seasonality);
-      const color = seasonTone(dir);
+      const color = seasonalityDirection === "SHORT"
+        ? seasonTone("SHORT")
+        : seasonalityDirection === "LONG"
+          ? seasonTone("LONG")
+          : "#94a3b8";
       projectionSeries.applyOptions({ color });
       projectionSeries.setData(projection);
     };
@@ -754,7 +687,6 @@ export default function CandleChart({
 
       const next: ZoneRect[] = [];
       const pushZone = (
-        kind: "demand" | "supply",
         zone: ZoneRuntime,
         startTs: number,
         endTs: number,
@@ -796,7 +728,8 @@ export default function CandleChart({
         const pixelWidth = right - left;
         if (!Number.isFinite(pixelWidth) || pixelWidth < 12) return;
         next.push({
-          kind,
+          kind: zone.kind,
+          strength: zone.strength,
           left,
           width: pixelWidth,
           top,
@@ -806,35 +739,46 @@ export default function CandleChart({
         });
       };
 
-      const demandActive = demandRuntime.filter((z) => Number(z.end) >= latestTs - 1);
-      const supplyActive = supplyRuntime.filter((z) => Number(z.end) >= latestTs - 1);
-      const demandSource = showHistoricalZones ? demandRuntime : demandActive.slice(-4);
-      const supplySource = showHistoricalZones ? supplyRuntime : supplyActive.slice(-4);
+      const zoneSource = enabledZones.filter((zone) => zone.active);
 
-      for (const z of demandSource) {
-        const endTs = showHistoricalZones ? Number(z.end) : latestTs;
+      for (const z of zoneSource) {
+        const endTs = z.active ? latestTs : z.endTs;
+        const fill = z.kind === "demand"
+          ? (z.strength === "strong" ? "rgba(57,255,64,0.22)" : "rgba(57,255,64,0.12)")
+          : (z.strength === "strong" ? "rgba(255,56,76,0.22)" : "rgba(255,56,76,0.12)");
+        const border = z.kind === "demand"
+          ? (z.strength === "strong" ? "rgba(135,255,145,0.72)" : "rgba(135,255,145,0.46)")
+          : (z.strength === "strong" ? "rgba(255,122,136,0.72)" : "rgba(255,122,136,0.46)");
         pushZone(
-          "demand",
           z,
-          z.start,
+          z.startTs,
           endTs,
-          "linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.04))",
-          "rgba(255,255,255,0.28)",
-        );
-      }
-      for (const z of supplySource) {
-        const endTs = showHistoricalZones ? Number(z.end) : latestTs;
-        pushZone(
-          "supply",
-          z,
-          z.start,
-          endTs,
-          `linear-gradient(180deg, ${hexToRgba(primaryAccent, 0.22)}, ${hexToRgba(primaryAccent, 0.06)})`,
-          hexToRgba(primaryAccent, 0.44),
+          fill,
+          border,
         );
       }
 
-      setZones(resolveZoneOverlaps(next, heightLimit));
+      const overlayProjection = projectionRef.current;
+      if (bars.length && overlayProjection.length) {
+        const entryX = scale.timeToCoordinate(bars[bars.length - 1].time);
+        const exitX = scale.timeToCoordinate(overlayProjection[overlayProjection.length - 1].time);
+        if (entryX != null && exitX != null && Number.isFinite(entryX) && Number.isFinite(exitX)) {
+          const left = Math.min(entryX, exitX);
+          const right = Math.max(entryX, exitX);
+          setSeasonOverlay({
+            left,
+            width: Math.max(2, right - left),
+            entryX,
+            exitX,
+            color: seasonalityDirection === "SHORT" ? "rgba(255,56,76,0.18)" : seasonalityDirection === "LONG" ? "rgba(57,255,64,0.16)" : "rgba(148,163,184,0.14)",
+          });
+        } else {
+          setSeasonOverlay(null);
+        }
+      } else {
+        setSeasonOverlay(null);
+      }
+      setZones(next);
     };
 
     updateZonesRef.current = () => projectZones(currentBarsRef.current);
@@ -844,7 +788,7 @@ export default function CandleChart({
       if (!Number.isFinite(totalBars) || totalBars <= 0) return;
       const span = TIMEFRAME_BARS[timeframe] ?? 100;
       const stepSec = Math.max(60, Math.round(inferBarStepSeconds(timeframe, bars)));
-      const horizonDays = seasonHorizonDays(seasonality);
+      const horizonDays = seasonHorizonDays(seasonalityAnalysis.stats.bestHorizonDays);
       const projectionBars = Math.ceil((horizonDays * 24 * 60 * 60) / stepSec);
       const rightPad = Math.max(24, projectionBars + 6);
       const from = Math.max(0, totalBars - span);
@@ -940,9 +884,11 @@ export default function CandleChart({
       onRecentSignalChange?.(null);
       dataLenRef.current = 0;
       currentBarsRef.current = [];
+      projectionRef.current = [];
       setZones([]);
+      setSeasonOverlay(null);
       onTimeRangeChange?.(null);
-      setNoDataMessage("No data available for this asset/timeframe.");
+      setNoDataMessage("Market data unavailable for this asset.");
       return;
     }
 
@@ -959,15 +905,37 @@ export default function CandleChart({
         stageTimerRef.current = null;
       }, stageDelayMs);
     }
-  }, [activePayload, evaluation, loopReplayTick, onRecentSignalChange, onTimeRangeChange, primaryAccent, seasonality, showHistoricalZones, showSignals, timeframe]);
+  }, [activePayload, evaluation, loopReplayTick, onRecentSignalChange, onTimeRangeChange, seasonalityAnalysis, seasonalityDirection, seasonalityHasEdge, showSignals, showZones, timeframe]);
 
   return (
     <div className="relative h-full w-full overflow-hidden">
       <div className="pointer-events-none absolute inset-0 z-[1]">
+        {seasonOverlay ? (
+          <>
+            <div
+              className="absolute bottom-0 top-0"
+              style={{
+                left: `${seasonOverlay.left}px`,
+                width: `${seasonOverlay.width}px`,
+                background: `linear-gradient(180deg, ${seasonOverlay.color}, rgba(0,0,0,0))`,
+                borderLeft: "1px solid rgba(226,232,240,0.18)",
+                borderRight: "1px solid rgba(226,232,240,0.18)",
+              }}
+            />
+            <div
+              className="absolute bottom-3 top-3 w-px border-l border-dashed border-slate-300/50"
+              style={{ left: `${seasonOverlay.entryX}px` }}
+            />
+            <div
+              className="absolute bottom-3 top-3 w-px border-l border-dashed border-slate-300/50"
+              style={{ left: `${seasonOverlay.exitX}px` }}
+            />
+          </>
+        ) : null}
         {zones.map((zone, idx) => (
           <div
             key={`z-${idx}`}
-            className="absolute rounded-[4px]"
+            className="absolute"
             style={{
               left: `${zone.left}px`,
               width: `${zone.width}px`,
@@ -975,7 +943,7 @@ export default function CandleChart({
               height: `${zone.height}px`,
               background: zone.fill,
               border: `1px solid ${zone.border}`,
-              boxShadow: zone.kind === "supply" ? `0 0 10px ${hexToRgba(primaryAccent, 0.16)}` : "0 0 8px rgba(255,255,255,0.08)",
+              boxShadow: zone.strength === "strong" ? `0 0 0 1px ${zone.border}` : "none",
             }}
           />
         ))}
@@ -992,23 +960,20 @@ export default function CandleChart({
           }}
         >
           <span>{title}</span>
-          <span className="text-[9px] font-medium text-slate-300">
-            {`Source: ${sourceLabel}`}
-          </span>
         </div>
 
         <div className="scroll-thin flex min-w-0 flex-1 items-center gap-1 overflow-x-auto overflow-y-hidden whitespace-nowrap pr-1">
           <div className="flex shrink-0 items-center gap-1 rounded-md border border-slate-700/65 bg-[rgba(7,14,26,0.78)] px-1 py-1">
             <button
               type="button"
-              onClick={() => setShowHistoricalZones((v) => !v)}
+              onClick={() => setShowZones((v) => !v)}
               className={`rounded px-1.5 py-[2px] text-[9px] font-semibold transition ${
-                showHistoricalZones
+                showZones
                   ? activeBtnClass
                   : inactiveBtnClass
               }`}
             >
-              Hist Z
+              Zones
             </button>
             <button
               type="button"
@@ -1019,7 +984,7 @@ export default function CandleChart({
                   : inactiveBtnClass
               }`}
             >
-              Signale
+              Signals
             </button>
           </div>
 
@@ -1084,7 +1049,20 @@ export default function CandleChart({
         </button>
       ) : null}
 
-      <div ref={hostRef} className="relative z-[2] h-full w-full" />
+      <div ref={hostRef} className="relative z-[2] h-full w-full" title={sourceLabel ? `${title} · ${sourceLabel}` : title} />
+      <div className="pointer-events-none absolute bottom-3 right-3 z-[5] flex max-w-[280px] flex-col gap-1">
+        <div className="rounded-md border border-slate-700/80 bg-[rgba(5,10,18,0.92)] px-2.5 py-2 text-[10px] text-slate-100 shadow-[0_10px_24px_rgba(0,0,0,0.35)]">
+          <div className="font-semibold text-slate-300">Seasonality</div>
+          <div className="mt-1 flex items-center gap-2">
+            <span className="rounded border border-slate-700/70 px-1.5 py-[2px]" style={{ color: seasonalityDirection === "SHORT" ? "#ff7a88" : seasonalityDirection === "LONG" ? "#7fff8b" : "#cbd5e1" }}>
+              {seasonalityDirection}
+            </span>
+            <span>Sharpe {seasonalityAnalysis.stats.sharpeRatio.toFixed(2)}</span>
+            <span>WR {seasonalityAnalysis.stats.winRatePct.toFixed(0)}%</span>
+          </div>
+          <div className="mt-1 text-slate-400">{seasonalityAnalysis.stats.interpretation}</div>
+        </div>
+      </div>
       {(isPanelLoading || tfLoading) ? (
         <div className="pointer-events-none absolute inset-0 z-[6] grid place-items-center bg-[rgba(6,12,22,0.26)]">
           <div

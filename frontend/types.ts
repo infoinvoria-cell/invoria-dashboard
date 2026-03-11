@@ -115,6 +115,19 @@ export interface OhlcvPoint {
   volume: number | null;
 }
 
+export interface CandleIntegritySummary {
+  totalCandles: number;
+  validCandles: number;
+  rejectedCandles: number;
+  invalidStructureCount: number;
+  openEqualsCloseCount: number;
+  flatRangeCount: number;
+  openEqualsClosePct: number;
+  flatRangePct: number;
+  valid: boolean;
+  warnings: string[];
+}
+
 export interface SupplyDemandZone {
   start: string;
   end: string;
@@ -155,6 +168,7 @@ export interface TimeseriesResponse {
     start?: string | null;
     end?: string | null;
   };
+  integrity?: CandleIntegritySummary;
   ohlcv: OhlcvPoint[];
   supplyDemand: {
     demand: SupplyDemandZone[];

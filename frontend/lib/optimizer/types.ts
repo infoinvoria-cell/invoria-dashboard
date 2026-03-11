@@ -11,6 +11,10 @@ export type OptimizerAssetId =
 
 export type ZoneMode = "normal" | "strong" | "both";
 export type StopMode = "fixed" | "atr";
+export type ValuationPeriod = 10 | 15 | 20;
+export type ValuationMode = "ANY_SINGLE" | "TWO_OF_THREE" | "ALL_THREE" | "COMBINED" | "WEIGHTED_COMBINED";
+export type ValuationMultiPeriodLogic = "SINGLE" | "OR" | "AND" | "AGREEMENT";
+export type ValuationWeightProfile = "equal" | "macro" | "fx";
 
 export type RangeSpec = {
   min: number;
@@ -22,9 +26,12 @@ export type OptimizerConfig = {
   assets: OptimizerAssetId[];
   source: OptimizerDataSource;
   monteCarloSimulations: number;
+  valuationPeriods: ValuationPeriod[];
+  valuationModes: ValuationMode[];
+  valuationMultiPeriodLogics: ValuationMultiPeriodLogic[];
+  valuationWeightProfiles: ValuationWeightProfile[];
   broadRanges: {
     zoneLookback: RangeSpec;
-    valuationLength: RangeSpec;
     valuationThreshold: RangeSpec;
     seasonalityYears: RangeSpec;
     holdDays: RangeSpec;
@@ -66,19 +73,29 @@ export type TradeRecord = {
   direction: "long" | "short";
   entryDate: string;
   exitDate: string;
+  entryIndex: number;
+  exitIndex: number;
   holdDays: number;
   entryPrice: number;
   exitPrice: number;
+  stopPrice: number;
+  takeProfitPrice: number;
   returnPct: number;
   stopHit: boolean;
   takeProfitHit: boolean;
   breakEvenTriggered: boolean;
+  exitReason: "stop" | "target" | "time";
 };
 
 export type StrategyParams = {
   zoneMode: ZoneMode;
   zoneLookback: number;
-  valuationLength: 10 | 20;
+  valuationPrimaryPeriod: ValuationPeriod;
+  valuationSecondaryPeriod: ValuationPeriod | null;
+  valuationPrimaryMode: ValuationMode;
+  valuationSecondaryMode: ValuationMode | null;
+  valuationMultiPeriodLogic: ValuationMultiPeriodLogic;
+  valuationWeightProfile: ValuationWeightProfile;
   valuationThreshold: number;
   seasonalityYears: number;
   holdDays: number;
@@ -97,7 +114,11 @@ export type StrategyParams = {
 
 export type OptimizerParameterKey =
   | "zoneLookback"
-  | "valuationLength"
+  | "valuationPrimaryPeriod"
+  | "valuationSecondaryPeriod"
+  | "valuationModeIndex"
+  | "valuationMultiPeriodLogicIndex"
+  | "valuationWeightProfileIndex"
   | "valuationThreshold"
   | "seasonalityYears"
   | "holdDays"
@@ -157,15 +178,136 @@ export type EquityPoint = {
   equity: number;
 };
 
+export type OptimizerCandleIntegrityReport = {
+  assetId: OptimizerAssetId;
+  symbol: string;
+  candleCount: number;
+  invalidHighLowCount: number;
+  flatRangeCount: number;
+  openEqualsCloseCount: number;
+  invalidHighLowRatio: number;
+  flatRangeRatio: number;
+  openEqualsCloseRatio: number;
+  warnings: string[];
+  isValid: boolean;
+};
+
+export type OptimizerTradeValidation = {
+  isValid: boolean;
+  reason: string | null;
+  minimumTradesPerAsset: number;
+  minimumTotalTrades: number;
+  minimumTradesPerYear: number;
+  totalTrades: number;
+  tradesPerYear: number;
+  assetTradeCounts: Array<{
+    assetId: OptimizerAssetId;
+    trades: number;
+    minimumRequired: number;
+  }>;
+};
+
+export type OptimizerDebugZone = {
+  id: string;
+  kind: "demand" | "supply";
+  strength: "normal" | "strong";
+  low: number;
+  high: number;
+  startIndex: number;
+  endIndex: number;
+  touched: boolean;
+  broken: boolean;
+  lastTouchedIndex: number | null;
+};
+
+export type OptimizerDebugSignal = {
+  assetId: OptimizerAssetId;
+  barIndex: number;
+  time: string;
+  direction: "long" | "short";
+  zoneId: string | null;
+  valuationScorePrimary: number | null;
+  valuationScoreSecondary: number | null;
+  valuationPass: boolean;
+  seasonalityPass: boolean;
+  seasonalityDirection: "long" | "short" | "neutral";
+  seasonalityScore: number;
+  candleConfirmation: boolean;
+};
+
+export type OptimizerValuationWindow = {
+  barIndex: number;
+  time: string;
+  valuationScorePrimary: number | null;
+  valuationScoreSecondary: number | null;
+  longPass: boolean;
+  shortPass: boolean;
+};
+
+export type OptimizerStrategyValuationSummary = {
+  periods: ValuationPeriod[];
+  primaryPeriod: ValuationPeriod;
+  secondaryPeriod: ValuationPeriod | null;
+  primaryMode: ValuationMode;
+  secondaryMode: ValuationMode | null;
+  multiPeriodLogic: ValuationMultiPeriodLogic;
+  weightProfile: ValuationWeightProfile;
+  threshold: number;
+  signalDensity: number;
+  candidateSignals: number;
+  qualifyingSignals: number;
+  contributionReturn: number;
+};
+
+export type OptimizerSeasonalityWindow = {
+  startIndex: number;
+  endIndex: number;
+  direction: "long" | "short";
+  score: number;
+  holdDays: number;
+};
+
+export type OptimizerDebugAsset = {
+  assetId: OptimizerAssetId;
+  symbol: string;
+  candles: Array<{
+    t: string;
+    open: number;
+    high: number;
+    low: number;
+    close: number;
+  }>;
+  zones: OptimizerDebugZone[];
+  signals: OptimizerDebugSignal[];
+  valuationWindows: OptimizerValuationWindow[];
+  seasonalityWindows: OptimizerSeasonalityWindow[];
+  trades: TradeRecord[];
+  integrity: OptimizerCandleIntegrityReport;
+};
+
+export type OptimizerPreviewResponse = {
+  generatedAt: string;
+  config: OptimizerConfig;
+  coverage: OptimizerMarketCoverage[];
+  integrity: OptimizerCandleIntegrityReport[];
+  selectedAssetId: OptimizerAssetId;
+  previewAsset: OptimizerDebugAsset | null;
+  warnings: string[];
+  requiresConfirmation: boolean;
+};
+
 export type OptimizerStrategyResult = {
   rank: number;
   stage: 1 | 2 | 3;
   strategyId: string;
   params: StrategyParams;
+  valuation: OptimizerStrategyValuationSummary;
   metrics: StrategyMetrics;
   assetMetrics: StrategyAssetMetrics[];
   equityCurve: EquityPoint[];
   trades: TradeRecord[];
+  validation: OptimizerTradeValidation;
+  debugAssets: OptimizerDebugAsset[];
   monteCarlo: MonteCarloSummary | null;
 };
 
@@ -183,6 +325,7 @@ export type OptimizerHeatmapCell = {
   sharpe: number;
   cagr: number;
   maxDrawdown: number;
+  trades: number;
   count: number;
   smoothedScore: number;
 };
@@ -230,8 +373,11 @@ export type OptimizerRunResponse = {
   generatedAt: string;
   config: OptimizerConfig;
   coverage: OptimizerMarketCoverage[];
+  integrity: OptimizerCandleIntegrityReport[];
+  preview: OptimizerPreviewResponse | null;
   stageSummaries: OptimizerStageSummary[];
   topStrategies: OptimizerStrategyResult[];
+  invalidStrategies: OptimizerStrategyResult[];
   stability: OptimizerStabilityAnalysis;
   warnings: string[];
 };

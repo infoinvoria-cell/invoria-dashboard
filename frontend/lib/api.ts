@@ -207,19 +207,19 @@ export const GlobeApi = {
       ? `&refresh_bucket=${encodeURIComponent(String(Math.floor(Number(refreshBucket))))}`
       : "";
     return fetchJson<TimeseriesResponse>(
-      endpoint(`/api/asset/${assetId}/timeseries?tf=${tf}&source=${src}&continuous_mode=${mode}${refreshPart}`),
+      endpoint(`/api/asset/${assetId}/timeseries?tf=${tf}&source=${src}&continuous_mode=${mode}&allow_fallback=1${refreshPart}`),
       MARKET_CACHE_MS,
     );
   },
   getEvaluation(assetId: string, source = "tradingview"): Promise<EvaluationResponse> {
     const src = encodeURIComponent(String(source || "dukascopy").toLowerCase());
-    return fetchJson<EvaluationResponse>(endpoint(`/api/asset/${assetId}/evaluation?v=6&source=${src}`), VALUATION_CACHE_MS);
+    return fetchJson<EvaluationResponse>(endpoint(`/api/asset/${assetId}/evaluation?v=6&source=${src}&allow_fallback=1`), VALUATION_CACHE_MS);
   },
   getSeasonality(assetId: string, source = "tradingview", years = 10): Promise<SeasonalityResponse> {
     // version tag avoids stale in-memory cache collisions during active UI/data iterations
     const src = encodeURIComponent(String(source || "dukascopy").toLowerCase());
     const yearsParam = encodeURIComponent(String(Math.max(10, Math.floor(Number(years) || 10))));
-    return fetchJson<SeasonalityResponse>(endpoint(`/api/asset/${assetId}/seasonality?v=3&source=${src}&years=${yearsParam}`), SEASONALITY_CACHE_MS);
+    return fetchJson<SeasonalityResponse>(endpoint(`/api/asset/${assetId}/seasonality?v=3&source=${src}&years=${yearsParam}&allow_fallback=1`), SEASONALITY_CACHE_MS);
   },
   getGlobalNews(): Promise<NewsResponse> {
     return fetchJson<NewsResponse>(endpoint("/api/news/global"), NEWS_CACHE_MS);

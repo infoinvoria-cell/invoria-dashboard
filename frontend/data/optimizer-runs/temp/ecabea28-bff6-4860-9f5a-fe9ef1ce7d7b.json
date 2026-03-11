@@ -1,0 +1,129 @@
+{
+  "summary": {
+    "runId": "ecabea28-bff6-4860-9f5a-fe9ef1ce7d7b",
+    "createdAt": "2026-03-11T12:02:17.408Z",
+    "updatedAt": "2026-03-11T12:02:20.290Z",
+    "mode": "temp",
+    "assets": [
+      "cross_eurusd",
+      "cross_gbpusd",
+      "cross_usdjpy",
+      "cross_usdchf",
+      "cross_audusd",
+      "cross_usdcad",
+      "cross_nzdusd"
+    ],
+    "strategyCount": 0,
+    "bestSharpe": 0,
+    "bestCagr": 0,
+    "status": "running",
+    "warnings": [],
+    "progress": {
+      "runId": "ecabea28-bff6-4860-9f5a-fe9ef1ce7d7b",
+      "stage": "data",
+      "label": "Data validation",
+      "stageIndex": 1,
+      "stageCount": 5,
+      "percent": 70,
+      "completed": 7,
+      "total": 10,
+      "etaSeconds": null,
+      "message": "Loaded NZDUSD (4436 daily bars).",
+      "updatedAt": "2026-03-11T12:02:20.290Z"
+    }
+  },
+  "config": {
+    "assets": [
+      "cross_eurusd",
+      "cross_gbpusd",
+      "cross_usdjpy",
+      "cross_usdchf",
+      "cross_audusd",
+      "cross_usdcad",
+      "cross_nzdusd"
+    ],
+    "source": "dukascopy",
+    "monteCarloSimulations": 1000,
+    "valuationPeriods": [
+      10,
+      15,
+      20
+    ],
+    "valuationModes": [
+      "ANY_SINGLE",
+      "ALL_THREE",
+      "COMBINED",
+      "WEIGHTED_COMBINED",
+      "TWO_OF_THREE"
+    ],
+    "valuationMultiPeriodLogics": [
+      "SINGLE",
+      "OR",
+      "AND",
+      "AGREEMENT"
+    ],
+    "valuationWeightProfiles": [
+      "equal",
+      "macro",
+      "fx"
+    ],
+    "broadRanges": {
+      "zoneLookback": {
+        "min": 3,
+        "max": 10,
+        "step": 1
+      },
+      "valuationThreshold": {
+        "min": 75,
+        "max": 75,
+        "step": 1
+      },
+      "seasonalityYears": {
+        "min": 8,
+        "max": 12,
+        "step": 2
+      },
+      "holdDays": {
+        "min": 5,
+        "max": 20,
+        "step": 1
+      },
+      "atrPeriod": {
+        "min": 10,
+        "max": 20,
+        "step": 5
+      },
+      "atrMultiplier": {
+        "min": 1,
+        "max": 3,
+        "step": 0.5
+      },
+      "fixedStopPct": {
+        "min": 0.4,
+        "max": 1.2,
+        "step": 0.2
+      },
+      "takeProfitRr": {
+        "min": 1,
+        "max": 3,
+        "step": 0.5
+      },
+      "breakEvenRr": {
+        "min": 0.5,
+        "max": 1.5,
+        "step": 0.5
+      }
+    },
+    "toggles": {
+      "allowNormalZones": true,
+      "allowStrongZones": true,
+      "requireCandleConfirmation": true,
+      "requireValuation": true,
+      "requireSeasonality": true,
+      "allowLong": true,
+      "allowShort": true
+    }
+  },
+  "result": null,
+  "error": null
+}

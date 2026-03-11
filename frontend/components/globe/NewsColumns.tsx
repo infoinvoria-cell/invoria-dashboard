@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Globe2 } from "lucide-react";
 
 import { GlobeApi } from "../../lib/api";
 import { headlineGlyph } from "../../lib/icons";
@@ -77,6 +76,32 @@ function sourceLogo(item: NewsItem): string {
   return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64`;
 }
 
+function countryFlag(country?: string): string {
+  const raw = String(country || "").trim();
+  if (!raw) return "UN";
+  const map: Record<string, string> = {
+    us: "US",
+    usa: "US",
+    "united states": "US",
+    uk: "GB",
+    gb: "GB",
+    "united kingdom": "GB",
+    eurozone: "EU",
+    eu: "EU",
+    germany: "DE",
+    france: "FR",
+    canada: "CA",
+    japan: "JP",
+    china: "CN",
+    australia: "AU",
+    "new zealand": "NZ",
+    switzerland: "CH",
+  };
+  const code = (map[raw.toLowerCase()] || raw).toUpperCase();
+  if (!/^[A-Z]{2}$/.test(code)) return raw.slice(0, 2).toUpperCase();
+  return String.fromCodePoint(...code.split("").map((char) => 127397 + char.charCodeAt(0)));
+}
+
 function sortRows(items: NewsItem[]): NewsItem[] {
   return [...items].sort((a, b) => {
     const pa = Number(a.priorityScore ?? 0);
@@ -101,7 +126,8 @@ function NewsList({
 }) {
   const [showGerman, setShowGerman] = useState(false);
   const [translations, setTranslations] = useState<Record<string, TranslationRow>>({});
-  const rows = useMemo(() => sortRows(items).slice(0, 10), [items]);
+  const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
+  const rows = useMemo(() => sortRows(items).slice(0, 12), [items]);
   const accentClass = goldThemeEnabled ? "hover:border-[#d6b24a]/60 hover:text-[#fff3d1]" : "hover:border-[#2962ff]/60 hover:text-[#dce8ff]";
 
   const ensureGermanTranslation = async (item: NewsItem, idx: number) => {
@@ -171,12 +197,11 @@ function NewsList({
           className={`inline-flex h-6 shrink-0 items-center gap-1 rounded-md border border-slate-700/65 px-1.5 text-[9px] font-semibold text-slate-200 transition ${accentClass}`}
           title={showGerman ? "Switch back to English" : "Translate to German"}
         >
-          <Globe2 size={11} strokeWidth={1.8} />
           <span>{showGerman ? "EN" : "DE"}</span>
         </button>
       </div>
       <div className="scroll-thin min-h-0 flex-1 overflow-y-auto pr-1">
-        <div className="space-y-1">
+        <div className="space-y-1.5">
           {rows.map((item, idx) => {
             const key = rowKey(item, idx);
             const translation = translations[key];
@@ -187,13 +212,14 @@ function NewsList({
             const category = categoryLabel(item.category);
             const timestamp = relativeTime(item.timestamp || item.publishedAt);
             const relatedAssets = Array.isArray(item.relatedAssets) ? item.relatedAssets.slice(0, 3) : [];
+            const expanded = Boolean(expandedRows[key]);
 
             return (
               <article
                 key={key}
-                className="rounded-xl border border-slate-700/55 bg-[rgba(7,14,26,0.62)] px-3 py-1.25 text-[10px] text-slate-100 shadow-[0_10px_24px_rgba(0,0,0,0.22)]"
+                className="rounded-lg border border-slate-700/55 bg-[rgba(7,14,26,0.62)] text-[10px] text-slate-100 shadow-[0_10px_24px_rgba(0,0,0,0.18)]"
               >
-                <div className="mb-1 flex items-center justify-between gap-2">
+                <div className="grid grid-cols-[124px_minmax(0,1fr)_42px] items-start gap-2 px-2.5 py-2">
                   <div className="flex min-w-0 items-center gap-2">
                     <img
                       src={sourceLogo(item)}
@@ -208,50 +234,56 @@ function NewsList({
                     />
                     <div className="min-w-0">
                       <div className="truncate text-[9px] font-semibold uppercase tracking-[0.08em] text-slate-300">{item.source}</div>
-                      <div className="mt-0.5 flex flex-wrap items-center gap-1">
-                        {country ? (
-                          <span className="rounded border border-slate-700/65 px-1 py-0 text-[8px] text-slate-300">
-                            {country}
-                          </span>
-                        ) : null}
-                        <span className="rounded border border-slate-700/65 px-1 py-0 text-[8px] text-slate-300">
-                          {category}
-                        </span>
-                        {translation?.loading && showGerman ? (
-                          <span className="rounded border border-slate-700/65 px-1 py-0 text-[8px] text-slate-300">
-                            Translating...
-                          </span>
-                        ) : null}
+                      <div className="mt-0.5 flex items-center gap-1.5 text-[8px] text-slate-400">
+                        <span>{countryFlag(country)}</span>
+                        <span>{category}</span>
                       </div>
                     </div>
                   </div>
-                </div>
 
-                <a
-                  href={item.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className={`line-clamp-1 block text-[10.5px] font-semibold leading-snug text-slate-50 transition ${goldThemeEnabled ? "hover:text-[#ffe4a6]" : "hover:text-[#97b7ff]"}`}
-                >
-                  {titleText}
-                </a>
-
-                <div className="mt-1 flex items-center justify-between gap-2">
-                  <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                    <span className="inline-flex items-center gap-1 text-[8px] font-semibold text-slate-300">
-                      <span
-                        className="inline-block h-2 w-2 rounded-full"
-                        style={{ backgroundColor: sentiment.color, boxShadow: `0 0 8px ${sentiment.glow}` }}
-                      />
-                      {sentiment.label}
-                    </span>
-                    {relatedAssets.length ? (
-                      <span className="truncate text-[8px] text-slate-500">
-                        {relatedAssets.join(" / ").toUpperCase()}
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex shrink-0 items-center gap-1 text-[8px] font-semibold text-slate-300">
+                        <span
+                          className="inline-block h-2 w-2 rounded-full"
+                          style={{ backgroundColor: sentiment.color, boxShadow: `0 0 8px ${sentiment.glow}` }}
+                        />
+                        {sentiment.label}
                       </span>
+                      {translation?.loading && showGerman ? (
+                        <span className="rounded border border-slate-700/65 px-1 py-0 text-[8px] text-slate-300">
+                          Translating...
+                        </span>
+                      ) : null}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setExpandedRows((prev) => ({ ...prev, [key]: !prev[key] }))}
+                      className={`mt-0.5 block text-left text-[10.5px] font-semibold leading-snug text-slate-50 transition ${goldThemeEnabled ? "hover:text-[#ffe4a6]" : "hover:text-[#97b7ff]"}`}
+                    >
+                      <span className={expanded ? "" : "line-clamp-2"}>{titleText}</span>
+                    </button>
+                    {expanded ? (
+                      <div className="mt-1 flex items-start justify-between gap-2">
+                        <div className="min-w-0 text-[8.5px] leading-snug text-slate-400">
+                          {translated ? translation?.description || item.description : item.description}
+                          {relatedAssets.length ? `  ${relatedAssets.join(" / ").toUpperCase()}` : ""}
+                        </div>
+                        <a
+                          href={item.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className={`shrink-0 text-[8.5px] font-semibold ${goldThemeEnabled ? "text-[#ffe4a6]" : "text-[#97b7ff]"}`}
+                        >
+                          Open
+                        </a>
+                      </div>
                     ) : null}
                   </div>
-                  <div className="shrink-0 text-[8px] text-slate-500">{timestamp}</div>
+
+                  <div className="text-right text-[8px] text-slate-500">
+                    <div>{timestamp}</div>
+                  </div>
                 </div>
               </article>
             );

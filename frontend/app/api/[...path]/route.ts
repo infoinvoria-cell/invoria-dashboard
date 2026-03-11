@@ -39,6 +39,31 @@ const FALLBACK_ASSETS = assetSnapshot.items as Array<{
   }>;
 }>;
 
+function requestedSource(request: NextRequest): string {
+  return String(new URL(request.url).searchParams.get("source") || "yahoo").toLowerCase();
+}
+
+function disallowSilentYahooFallback(source: string): boolean {
+  return source === "tradingview" || source === "dukascopy";
+}
+
+function strictFallbackRouting(requestUrl: URL, source: string): boolean {
+  const allowFallback = requestUrl.searchParams.get("allow_fallback") === "1";
+  return disallowSilentYahooFallback(source) && !allowFallback;
+}
+
+function strictSourceError(path: string[], source: string, detail: string): NextResponse {
+  return NextResponse.json(
+    {
+      error: detail,
+      sourceRequested: source,
+      strictSourceRouting: true,
+      requestedPath: `/api/${path.join("/")}`,
+    },
+    { status: 503 },
+  );
+}
+
 function isoNow(): string {
   return new Date().toISOString();
 }
@@ -130,9 +155,10 @@ function buildAssetRegionsFallback(assetId: string) {
 async function fallbackResponse(path: string[], request: NextRequest): Promise<NextResponse> {
   const normalized = path.map((segment) => String(segment || "").trim().toLowerCase());
   const requestUrl = new URL(request.url);
-  const source = String(requestUrl.searchParams.get("source") || "yahoo").toLowerCase();
+  const source = requestedSource(request);
   const timeframe = String(requestUrl.searchParams.get("tf") || "D").toUpperCase();
   const continuousMode = String(requestUrl.searchParams.get("continuous_mode") || "regular").toLowerCase();
+  const strictSource = strictFallbackRouting(requestUrl, source);
 
   if (normalized.length === 1 && normalized[0] === "assets") {
     return NextResponse.json(assetSnapshot);
@@ -176,13 +202,16 @@ async function fallbackResponse(path: string[], request: NextRequest): Promise<N
   }
 
   if (normalized.length === 3 && normalized[0] === "asset" && normalized[2] === "timeseries") {
-    const payload = fallbackComparisonTimeseries(normalized[1]);
-    if (payload) {
-      return NextResponse.json(payload);
-    }
     const snapshot = await readTimeseriesSnapshot(source, normalized[1]);
     if (snapshot) {
       return NextResponse.json(snapshot);
+    }
+    if (strictSource) {
+      return strictSourceError(path, source, `No ${source} timeseries available and silent Yahoo fallback is disabled.`);
+    }
+    const payload = fallbackComparisonTimeseries(normalized[1]);
+    if (payload) {
+      return NextResponse.json(payload);
     }
     try {
       return NextResponse.json(await buildYahooTimeseriesPayload(normalized[1], timeframe, source, continuousMode));
@@ -192,6 +221,9 @@ async function fallbackResponse(path: string[], request: NextRequest): Promise<N
   }
 
   if (normalized.length === 3 && normalized[0] === "asset" && normalized[2] === "evaluation") {
+    if (strictSource) {
+      return strictSourceError(path, source, `No ${source} evaluation payload available and silent Yahoo fallback is disabled.`);
+    }
     try {
       return NextResponse.json(await buildYahooEvaluationPayload(normalized[1]));
     } catch (_error) {
@@ -200,6 +232,9 @@ async function fallbackResponse(path: string[], request: NextRequest): Promise<N
   }
 
   if (normalized.length === 3 && normalized[0] === "asset" && normalized[2] === "seasonality") {
+    if (strictSource) {
+      return strictSourceError(path, source, `No ${source} seasonality payload available and silent Yahoo fallback is disabled.`);
+    }
     try {
       return NextResponse.json(await buildYahooSeasonalityPayload(normalized[1]));
     } catch (_error) {
@@ -210,6 +245,9 @@ async function fallbackResponse(path: string[], request: NextRequest): Promise<N
   if (normalized.length === 2 && normalized[0] === "reference" && normalized[1] === "timeseries") {
     const symbol = String(requestUrl.searchParams.get("symbol") || "").trim();
     if (symbol) {
+      if (strictSource) {
+        return strictSourceError(path, source, `No ${source} reference timeseries available and silent Yahoo fallback is disabled.`);
+      }
       try {
         return NextResponse.json(await buildYahooReferenceTimeseriesPayload(symbol, timeframe, source, continuousMode));
       } catch (_error) {

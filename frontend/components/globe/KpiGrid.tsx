@@ -4,8 +4,8 @@ type Props = {
   indicators?: TimeseriesIndicators | null;
   aiScore?: number;
   breakdown?: Partial<AiScoreBreakdown>;
-  confidenceScore?: number;
-  signalQuality?: string;
+  valuation10?: number | null;
+  valuation20?: number | null;
   goldThemeEnabled?: boolean;
 };
 
@@ -28,35 +28,24 @@ function labelShort(name: keyof AiScoreBreakdown): string {
   return "Vol";
 }
 
-function confidenceColor(score: number): string {
-  if (score >= 80) return "#39ff40";
-  if (score >= 60) return "#7bff8f";
-  if (score >= 40) return "#9db0cf";
-  if (score >= 20) return "#ff9800";
-  return "#ff384c";
+function valuationColor(value: number | null | undefined): string {
+  const score = Number(value);
+  if (!Number.isFinite(score)) return "#cbd5e1";
+  if (score <= -75) return "#39ff40";
+  if (score >= 75) return "#ff384c";
+  return "#facc15";
 }
 
-function signalQualityValue(label: string): number {
-  const t = String(label || "").toLowerCase();
-  if (t.includes("high")) return 88;
-  if (t.includes("medium")) return 68;
-  if (t.includes("moderate")) return 48;
-  return 28;
-}
-
-export function KpiGrid({ indicators, aiScore, breakdown, confidenceScore, signalQuality, goldThemeEnabled = false }: Props) {
+export function KpiGrid({ indicators, aiScore, breakdown, valuation10, valuation20, goldThemeEnabled = false }: Props) {
   const trend = String(indicators?.trend ?? "-");
   const isBull = trend.toLowerCase().startsWith("bull");
   const trendColor = isBull ? "#39ff40" : "#ff384c";
   const safeScore = Number.isFinite(aiScore) ? Math.max(0, Math.min(100, Number(aiScore))) : 50;
-  const safeConfidence = Number.isFinite(confidenceScore) ? Math.max(0, Math.min(100, Number(confidenceScore))) : 0;
-  const safeSignalQuality = String(signalQuality || "Low");
-  const qualityValue = signalQualityValue(safeSignalQuality);
   const score = scoreColor(safeScore);
-  const confColor = confidenceColor(safeConfidence);
-  const qualityColor = confidenceColor(qualityValue);
   const neutralAccent = goldThemeEnabled ? "#d6b24a" : "#4d87fe";
   const breakdownItems: Array<keyof AiScoreBreakdown> = ["Valuation", "SupplyDemand", "Seasonality", "Momentum", "Volatility"];
+  const val10Score = Number.isFinite(Number(valuation10)) ? Math.max(-100, Math.min(100, Number(valuation10))) : null;
+  const val20Score = Number.isFinite(Number(valuation20)) ? Math.max(-100, Math.min(100, Number(valuation20))) : null;
 
   return (
     <div className="grid h-full grid-cols-1 gap-[10px] min-[480px]:grid-cols-2 min-[769px]:grid-cols-5">
@@ -116,31 +105,31 @@ export function KpiGrid({ indicators, aiScore, breakdown, confidenceScore, signa
         </div>
       </div>
       <div className="ivq-kpi-card flex h-full flex-col rounded-lg bg-transparent p-2">
-        <div className="ivq-kpi-label text-[9px] uppercase tracking-[0.11em] text-slate-400">Confidence</div>
+        <div className="ivq-kpi-label text-[9px] uppercase tracking-[0.11em] text-slate-400">Valuation 10</div>
         <div className="ivq-kpi-value flex items-center justify-between gap-2">
-          <div className="text-base font-semibold" style={{ color: confColor }}>
-            {safeConfidence.toFixed(0)}%
+          <div className="text-base font-semibold" style={{ color: valuationColor(val10Score) }}>
+            {val10Score == null ? "-" : `${val10Score >= 0 ? "+" : ""}${val10Score.toFixed(0)}`}
           </div>
           <div className="h-1.5 w-[62px] rounded-full bg-slate-700/45">
-            <div className="h-1.5 rounded-full" style={{ width: `${safeConfidence}%`, backgroundColor: confColor }} />
+            <div className="h-1.5 rounded-full" style={{ width: `${val10Score == null ? 50 : Math.abs(val10Score)}%`, backgroundColor: valuationColor(val10Score) }} />
           </div>
         </div>
         <div className="mt-auto h-1.5 rounded-full bg-slate-700/45">
-          <div className="h-1.5 rounded-full" style={{ width: `${safeConfidence}%`, backgroundColor: confColor }} />
+          <div className="h-1.5 rounded-full" style={{ width: `${val10Score == null ? 50 : Math.abs(val10Score)}%`, backgroundColor: valuationColor(val10Score) }} />
         </div>
       </div>
       <div className="ivq-kpi-card flex h-full flex-col rounded-lg bg-transparent p-2">
-        <div className="ivq-kpi-label text-[9px] uppercase tracking-[0.11em] text-slate-400">Signal Quality</div>
+        <div className="ivq-kpi-label text-[9px] uppercase tracking-[0.11em] text-slate-400">Valuation 20</div>
         <div className="ivq-kpi-value flex items-center justify-between gap-2">
-          <div className="text-base font-semibold" style={{ color: qualityColor }}>
-            {safeSignalQuality}
+          <div className="text-base font-semibold" style={{ color: valuationColor(val20Score) }}>
+            {val20Score == null ? "-" : `${val20Score >= 0 ? "+" : ""}${val20Score.toFixed(0)}`}
           </div>
           <div className="h-1.5 w-[62px] rounded-full bg-slate-700/45">
-            <div className="h-1.5 rounded-full" style={{ width: `${qualityValue}%`, backgroundColor: qualityColor }} />
+            <div className="h-1.5 rounded-full" style={{ width: `${val20Score == null ? 50 : Math.abs(val20Score)}%`, backgroundColor: valuationColor(val20Score) }} />
           </div>
         </div>
         <div className="mt-auto h-1.5 rounded-full bg-slate-700/45">
-          <div className="h-1.5 rounded-full" style={{ width: `${qualityValue}%`, backgroundColor: qualityColor }} />
+          <div className="h-1.5 rounded-full" style={{ width: `${val20Score == null ? 50 : Math.abs(val20Score)}%`, backgroundColor: valuationColor(val20Score) }} />
         </div>
       </div>
     </div>

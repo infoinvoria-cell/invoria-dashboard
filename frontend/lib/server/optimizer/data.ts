@@ -1,7 +1,13 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
-import type { OptimizerAssetId, OptimizerConfig, OptimizerMarketCoverage } from "@/lib/optimizer/types";
+import type {
+  OptimizerAssetId,
+  OptimizerCandleIntegrityReport,
+  OptimizerConfig,
+  OptimizerMarketCoverage,
+} from "@/lib/optimizer/types";
+import { filterValidOhlcvSeries } from "@/lib/candleIntegrity";
 import { OPTIMIZER_FX_UNIVERSE } from "@/lib/server/optimizer/config";
 import { ensureForexCache, readForexCache } from "@/lib/server/optimizer/forexCache";
 import type { OhlcvPoint, TimeseriesResponse } from "@/types";
@@ -43,31 +49,43 @@ export type OptimizerLoadedData = {
   references: {
     dxy: OptimizerReferenceSeries;
     gold: OptimizerReferenceSeries;
-    us30y: OptimizerReferenceSeries;
+    us10y: OptimizerReferenceSeries;
   };
   coverage: OptimizerMarketCoverage[];
+  integrity: OptimizerCandleIntegrityReport[];
   warnings: string[];
 };
 
 type ReferenceFallbackSpec = {
-  symbol: "DXY" | "GC1!" | "ZB1!";
+  symbol: "DXY" | "GC1!" | "^TNX";
   fredSeries: string;
   label: string;
 };
 
+type ReferenceSymbol = "DXY" | "GC1!" | "^TNX";
+
 const REFERENCE_FALLBACKS: ReferenceFallbackSpec[] = [
   { symbol: "DXY", fredSeries: "DTWEXBGS", label: "FRED broad dollar index" },
   { symbol: "GC1!", fredSeries: "GOLDAMGBD228NLBM", label: "FRED gold LBMA" },
-  { symbol: "ZB1!", fredSeries: "DGS30", label: "FRED 30Y treasury yield" },
+  { symbol: "^TNX", fredSeries: "DGS10", label: "FRED 10Y treasury yield" },
 ];
+const REFERENCE_PROVIDER_SYMBOLS: Record<ReferenceSymbol, Record<string, string[]>> = {
+  DXY: {
+    dukascopy: ["DXY", "USDIDX"],
+    tradingview: ["DXY", "TVC:DXY"],
+  },
+  "GC1!": {
+    dukascopy: ["XAUUSD", "GOLD"],
+    tradingview: ["GC1!", "COMEX:GC1!", "OANDA:XAUUSD"],
+  },
+  "^TNX": {
+    dukascopy: ["US10Y", "UST10Y"],
+    tradingview: ["US10Y", "TVC:US10Y", "TVC:TNX"],
+  },
+};
 
 function isoDay(value: string): string {
   return new Date(value).toISOString().slice(0, 10);
-}
-
-function toFinite(value: unknown): number | null {
-  const numeric = Number(value);
-  return Number.isFinite(numeric) ? numeric : null;
 }
 
 function snapshotRoots(): string[] {
@@ -102,24 +120,10 @@ async function readOptimizerSnapshot(scope: "references", provider: string, key:
 }
 
 function sanitizeBars(points: OhlcvPoint[]): OhlcvPoint[] {
-  return points
-    .map((row) => {
-      const open = toFinite(row.open);
-      const high = toFinite(row.high);
-      const low = toFinite(row.low);
-      const close = toFinite(row.close);
-      if (open == null || high == null || low == null || close == null) return null;
-      if (open <= 0 || high <= 0 || low <= 0 || close <= 0) return null;
-      return {
-        ...row,
-        open,
-        high: Math.max(high, open, close),
-        low: Math.min(low, open, close),
-        close,
-      };
-    })
-    .filter((row): row is OhlcvPoint => row !== null)
-    .sort((left, right) => new Date(left.t).getTime() - new Date(right.t).getTime());
+  return filterValidOhlcvSeries(points).map((row) => ({
+    ...row,
+    volume: row.volume ?? null,
+  }));
 }
 
 function aggregateH1ToD1(points: OhlcvPoint[]): OptimizerDailyBar[] {
@@ -220,27 +224,136 @@ async function loadReferenceFromFred(spec: ReferenceFallbackSpec): Promise<Optim
   };
 }
 
-async function loadReferenceTimeseries(origin: string, symbol: "DXY" | "GC1!" | "ZB1!", source: string): Promise<OptimizerReferenceSeries> {
+async function loadReferenceCandidate(origin: string, symbol: string, source: string): Promise<OptimizerReferenceSeries> {
   const snapshot = await readOptimizerSnapshot("references", source, symbol);
   if (snapshot) return toReferenceSeries(symbol, snapshot, `${source}-snapshot`);
 
-  const sources = [source, "tradingview", "yahoo"].filter((item, index, list) => list.indexOf(item) === index);
-  let lastError: Error | null = null;
+  const url = `${origin}/api/reference/timeseries?symbol=${encodeURIComponent(symbol)}&tf=D&source=${encodeURIComponent(source)}`;
+  const payload = await fetchJson<TimeseriesResponse>(url);
+  return toReferenceSeries(symbol, payload, payload.sourceUsed || source);
+}
+
+function sortedReferenceDates(series: OptimizerReferenceSeries): string[] {
+  return Array.from(series.closesByDate.keys()).sort((left, right) => left.localeCompare(right));
+}
+
+function rebaseReferenceSeries(series: OptimizerReferenceSeries, factor: number, sourceUsed: string): OptimizerReferenceSeries {
+  if (!Number.isFinite(factor) || factor <= 0 || Math.abs(factor - 1) < 1e-12) {
+    return { ...series, sourceUsed };
+  }
+  const closesByDate = new Map<string, number>();
+  for (const [day, close] of series.closesByDate.entries()) {
+    closesByDate.set(day, close * factor);
+  }
+  return {
+    symbol: series.symbol,
+    closesByDate,
+    sourceUsed,
+    start: series.start,
+    end: series.end,
+  };
+}
+
+function mergeReferenceSeries(
+  symbol: ReferenceSymbol,
+  historical: OptimizerReferenceSeries | null,
+  recent: OptimizerReferenceSeries | null,
+): OptimizerReferenceSeries {
+  if (!historical && !recent) return emptyReferenceSeries(symbol);
+  if (!historical) return recent as OptimizerReferenceSeries;
+  if (!recent || !recent.start) return historical;
+
+  const recentDates = sortedReferenceDates(recent);
+  const recentStart = recent.start;
+  const recentStartClose = recent.closesByDate.get(recentStart);
+  const historicalDates = sortedReferenceDates(historical).filter((day) => day < recentStart);
+  let rebasedHistorical = historical;
+
+  if (historicalDates.length && Number.isFinite(recentStartClose)) {
+    const anchorDay = historicalDates[historicalDates.length - 1];
+    const anchorClose = historical.closesByDate.get(anchorDay);
+    if (Number.isFinite(anchorClose) && anchorClose && recentStartClose) {
+      rebasedHistorical = rebaseReferenceSeries(
+        historical,
+        recentStartClose / anchorClose,
+        `${historical.sourceUsed} -> ${recent.sourceUsed}`,
+      );
+    }
+  }
+
+  const closesByDate = new Map<string, number>();
+  for (const day of sortedReferenceDates(rebasedHistorical)) {
+    if (day < recentStart) {
+      const value = rebasedHistorical.closesByDate.get(day);
+      if (Number.isFinite(value)) closesByDate.set(day, value as number);
+    }
+  }
+  for (const day of recentDates) {
+    const value = recent.closesByDate.get(day);
+    if (Number.isFinite(value)) closesByDate.set(day, value as number);
+  }
+
+  const dates = Array.from(closesByDate.keys()).sort((left, right) => left.localeCompare(right));
+  return {
+    symbol,
+    closesByDate,
+    sourceUsed: `${rebasedHistorical.sourceUsed} + ${recent.sourceUsed}`,
+    start: dates[0] ?? null,
+    end: dates[dates.length - 1] ?? null,
+  };
+}
+
+async function loadHistoricalReferenceBridge(origin: string, symbol: ReferenceSymbol, preferredSource: string): Promise<OptimizerReferenceSeries | null> {
+  const sources = [preferredSource, "tradingview", "dukascopy"].filter((item, index, list) => item !== "yahoo" && list.indexOf(item) === index);
   for (const currentSource of sources) {
-    try {
-      const url = `${origin}/api/reference/timeseries?symbol=${encodeURIComponent(symbol)}&tf=D&source=${encodeURIComponent(currentSource)}`;
-      const payload = await fetchJson<TimeseriesResponse>(url);
-      return toReferenceSeries(symbol, payload, payload.sourceUsed || currentSource);
-    } catch (error) {
-      lastError = error instanceof Error ? error : new Error(String(error));
+    const aliases = REFERENCE_PROVIDER_SYMBOLS[symbol][currentSource] ?? [symbol];
+    for (const alias of aliases) {
+      try {
+        const candidate = await loadReferenceCandidate(origin, alias, currentSource);
+        if (candidate.start && candidate.closesByDate.size > 0) {
+          return {
+            ...candidate,
+            symbol,
+            sourceUsed: `${currentSource}:${alias}${candidate.sourceUsed && candidate.sourceUsed !== currentSource ? ` (${candidate.sourceUsed})` : ""}`,
+          };
+        }
+      } catch {
+        // try next alias/provider
+      }
     }
   }
 
   const spec = REFERENCE_FALLBACKS.find((item) => item.symbol === symbol);
-  if (spec) {
-    return loadReferenceFromFred(spec);
+  if (!spec) return null;
+  return loadReferenceFromFred(spec);
+}
+
+async function loadReferenceTimeseries(origin: string, symbol: ReferenceSymbol, source: string): Promise<OptimizerReferenceSeries> {
+  let yahooSeries: OptimizerReferenceSeries | null = null;
+  try {
+    yahooSeries = await loadReferenceCandidate(origin, symbol, "yahoo");
+  } catch {
+    yahooSeries = null;
   }
-  throw lastError ?? new Error(`Unable to load reference series for ${symbol}`);
+
+  if (yahooSeries?.start && yahooSeries.start <= TARGET_START_DAY) {
+    return {
+      ...yahooSeries,
+      symbol,
+    };
+  }
+
+  let historicalBridge: OptimizerReferenceSeries | null = null;
+  try {
+    historicalBridge = await loadHistoricalReferenceBridge(origin, symbol, source);
+  } catch {
+    historicalBridge = null;
+  }
+
+  const merged = mergeReferenceSeries(symbol, historicalBridge, yahooSeries);
+  if (merged.start) return merged;
+
+  throw new Error(`Unable to load reference series for ${symbol}`);
 }
 
 function toReferenceSeries(symbol: string, payload: TimeseriesResponse, sourceUsed?: string): OptimizerReferenceSeries {
@@ -323,6 +436,50 @@ function analyzeCoverage(assetId: OptimizerAssetId, symbol: string, barsH1: Ohlc
   };
 }
 
+function analyzeCandleIntegrity(assetId: OptimizerAssetId, symbol: string, barsD1: OptimizerDailyBar[]): OptimizerCandleIntegrityReport {
+  const candleCount = barsD1.length;
+  let invalidHighLowCount = 0;
+  let flatRangeCount = 0;
+  let openEqualsCloseCount = 0;
+
+  for (const bar of barsD1) {
+    const maxBody = Math.max(bar.open, bar.close);
+    const minBody = Math.min(bar.open, bar.close);
+    if (bar.high < maxBody || bar.low > minBody) invalidHighLowCount += 1;
+    if (Math.abs(bar.high - bar.low) < 1e-10) flatRangeCount += 1;
+    if (Math.abs(bar.open - bar.close) < 1e-10) openEqualsCloseCount += 1;
+  }
+
+  const invalidHighLowRatio = candleCount > 0 ? invalidHighLowCount / candleCount : 0;
+  const flatRangeRatio = candleCount > 0 ? flatRangeCount / candleCount : 0;
+  const openEqualsCloseRatio = candleCount > 0 ? openEqualsCloseCount / candleCount : 0;
+  const warnings: string[] = [];
+
+  if (invalidHighLowCount > 0) {
+    warnings.push(`High/low envelope violations: ${invalidHighLowCount}`);
+  }
+  if (flatRangeRatio > 0.01) {
+    warnings.push(`Flat candles exceed threshold: ${(flatRangeRatio * 100).toFixed(2)}%`);
+  }
+  if (openEqualsCloseRatio > 0.4) {
+    warnings.push(`Open equals close is excessive: ${(openEqualsCloseRatio * 100).toFixed(2)}%`);
+  }
+
+  return {
+    assetId,
+    symbol,
+    candleCount,
+    invalidHighLowCount,
+    flatRangeCount,
+    openEqualsCloseCount,
+    invalidHighLowRatio,
+    flatRangeRatio,
+    openEqualsCloseRatio,
+    warnings,
+    isValid: invalidHighLowCount === 0 && flatRangeRatio <= 0.01 && openEqualsCloseRatio <= 0.4,
+  };
+}
+
 function summarizeReferenceCoverage(series: OptimizerReferenceSeries, label: string, warnings: string[]): void {
   if (!series.start) {
     warnings.push(`${label}: reference series unavailable.`);
@@ -345,6 +502,7 @@ export async function loadOptimizerData(origin: string, config: OptimizerConfig,
 
   const assetPayloads: OptimizerAssetDataset[] = [];
   const coverage: OptimizerMarketCoverage[] = [];
+  const integrity: OptimizerCandleIntegrityReport[] = [];
 
   options?.onProgress?.(0, totalSteps, `Checking local Dukascopy H1 cache for ${selectedAssets.length} FX assets.`);
   await ensureForexCache(selectedAssets.map((item) => item.symbol));
@@ -374,12 +532,17 @@ export async function loadOptimizerData(origin: string, config: OptimizerConfig,
     if (assetCoverage.issues.length) {
       warnings.push(`${item.symbol}: ${assetCoverage.issues.join("; ")}.`);
     }
+    const assetIntegrity = analyzeCandleIntegrity(item.assetId, item.symbol, barsD1);
+    if (!assetIntegrity.isValid) {
+      warnings.push(`${item.symbol}: Invalid candle construction detected. ${assetIntegrity.warnings.join("; ")}.`);
+    }
     assetPayloads.push(dataset);
     coverage.push(assetCoverage);
+    integrity.push(assetIntegrity);
     bump(`Loaded ${item.symbol} (${barsD1.length} daily bars).`);
   }
 
-  const [dxy, gold, us30y] = await Promise.all([
+  const [dxy, gold, us10y] = await Promise.all([
     loadReferenceTimeseries(origin, "DXY", config.source).catch((error) => {
       warnings.push(`DXY reference unavailable: ${error instanceof Error ? error.message : String(error)}`);
       return emptyReferenceSeries("DXY");
@@ -388,23 +551,24 @@ export async function loadOptimizerData(origin: string, config: OptimizerConfig,
       warnings.push(`Gold reference unavailable: ${error instanceof Error ? error.message : String(error)}`);
       return emptyReferenceSeries("GC1!");
     }),
-    loadReferenceTimeseries(origin, "ZB1!", config.source).catch((error) => {
-      warnings.push(`US 30Y reference unavailable: ${error instanceof Error ? error.message : String(error)}`);
-      return emptyReferenceSeries("ZB1!");
+    loadReferenceTimeseries(origin, "^TNX", config.source).catch((error) => {
+      warnings.push(`US 10Y reference unavailable: ${error instanceof Error ? error.message : String(error)}`);
+      return emptyReferenceSeries("^TNX");
     }),
   ]);
   bump(`Loaded ${dxy.symbol} reference via ${dxy.sourceUsed}.`);
   bump(`Loaded ${gold.symbol} reference via ${gold.sourceUsed}.`);
-  bump(`Loaded ${us30y.symbol} reference via ${us30y.sourceUsed}.`);
+  bump(`Loaded ${us10y.symbol} reference via ${us10y.sourceUsed}.`);
 
   summarizeReferenceCoverage(dxy, "DXY", warnings);
   summarizeReferenceCoverage(gold, "Gold", warnings);
-  summarizeReferenceCoverage(us30y, "US 30Y", warnings);
+  summarizeReferenceCoverage(us10y, "US 10Y", warnings);
 
   return {
     assets: assetPayloads,
-    references: { dxy, gold, us30y },
+    references: { dxy, gold, us10y },
     coverage,
+    integrity,
     warnings,
   };
 }

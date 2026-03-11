@@ -5,6 +5,7 @@ import {
   AreaSeries,
   ColorType,
   CrosshairMode,
+  LineStyle,
   LineSeries,
   createChart,
   type IChartApi,
@@ -12,11 +13,13 @@ import {
   type UTCTimestamp,
 } from "lightweight-charts";
 
-import { getSeasonDirection, normalizedSeasonalityCurve, seasonTone } from "../../../lib/seasonality";
-import type { SeasonalityResponse } from "../../../types";
+import { buildGlobeSeasonalityAnalysis } from "../../../lib/globeSeasonality";
+import { seasonTone } from "../../../lib/seasonality";
+import type { OhlcvPoint, SeasonalityResponse } from "../../../types";
 
 type Props = {
   payload: SeasonalityResponse | null;
+  candles?: OhlcvPoint[];
   loopReplayTick?: number;
 };
 
@@ -51,14 +54,16 @@ function seasonFill(direction: "LONG" | "SHORT", tone: string) {
   };
 }
 
-export default function GlobeSeasonalityChart({ payload, loopReplayTick = 0 }: Props) {
+export default function GlobeSeasonalityChart({ payload, candles = [], loopReplayTick = 0 }: Props) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const lineSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
+  const medianSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
   const fillSeriesRef = useRef<ISeriesApi<"Area"> | null>(null);
   const loopAnimFrameRef = useRef<number | null>(null);
 
-  const direction = useMemo(() => getSeasonDirection(payload), [payload?.stats?.direction]);
+  const analysis = useMemo(() => buildGlobeSeasonalityAnalysis(candles, payload), [candles, payload]);
+  const direction = useMemo(() => (analysis.stats.direction === "SHORT" ? "SHORT" : "LONG"), [analysis.stats.direction]);
   const tone = seasonTone(direction);
   const fills = useMemo(() => seasonFill(direction, tone), [direction, tone]);
 
@@ -135,11 +140,19 @@ export default function GlobeSeasonalityChart({ payload, loopReplayTick = 0 }: P
       lastValueVisible: false,
       priceLineVisible: false,
     });
+    medianSeriesRef.current = chart.addSeries(LineSeries, {
+      color: rgba("#cbd5e1", 0.72),
+      lineWidth: 1,
+      lineStyle: LineStyle.Dashed,
+      lastValueVisible: false,
+      priceLineVisible: false,
+    });
 
     return () => {
       chart.remove();
       chartRef.current = null;
       lineSeriesRef.current = null;
+      medianSeriesRef.current = null;
       fillSeriesRef.current = null;
     };
   }, [fills.bottomColor, fills.topColor, tone]);
@@ -147,15 +160,16 @@ export default function GlobeSeasonalityChart({ payload, loopReplayTick = 0 }: P
   useEffect(() => {
     const chart = chartRef.current;
     const lineSeries = lineSeriesRef.current;
+    const medianSeries = medianSeriesRef.current;
     const fillSeries = fillSeriesRef.current;
-    if (!chart || !lineSeries || !fillSeries) return;
+    if (!chart || !lineSeries || !medianSeries || !fillSeries) return;
     if (loopAnimFrameRef.current != null) {
       window.cancelAnimationFrame(loopAnimFrameRef.current);
       loopAnimFrameRef.current = null;
     }
 
-    const curve = normalizedSeasonalityCurve(payload);
-    const data = curve.map((row) => ({ time: dayTs(row.x), value: row.y }));
+    const data = analysis.curve.map((row) => ({ time: dayTs(row.x), value: row.y }));
+    const medianData = analysis.medianCurve.map((row) => ({ time: dayTs(row.x), value: row.y }));
     const nextFills = seasonFill(direction, tone);
 
     fillSeries.applyOptions({
@@ -170,6 +184,7 @@ export default function GlobeSeasonalityChart({ payload, loopReplayTick = 0 }: P
       const startLen = 2;
       let shown = startLen;
       lineSeries.setData(data.slice(0, startLen));
+      medianSeries.setData(medianData.slice(0, startLen));
       fillSeries.setData(data.slice(0, startLen));
       chart.timeScale().fitContent();
 
@@ -181,6 +196,7 @@ export default function GlobeSeasonalityChart({ payload, loopReplayTick = 0 }: P
           shown = target;
           const next = data.slice(0, shown);
           lineSeries.setData(next);
+          medianSeries.setData(medianData.slice(0, Math.min(medianData.length, shown)));
           fillSeries.setData(next);
           chart.timeScale().fitContent();
         }
@@ -193,6 +209,7 @@ export default function GlobeSeasonalityChart({ payload, loopReplayTick = 0 }: P
       loopAnimFrameRef.current = window.requestAnimationFrame(animate);
     } else {
       lineSeries.setData(data);
+      medianSeries.setData(medianData);
       fillSeries.setData(data);
       chart.timeScale().fitContent();
     }
@@ -203,7 +220,7 @@ export default function GlobeSeasonalityChart({ payload, loopReplayTick = 0 }: P
         loopAnimFrameRef.current = null;
       }
     };
-  }, [direction, loopReplayTick, payload, tone]);
+  }, [analysis.curve, analysis.medianCurve, direction, loopReplayTick, tone]);
 
   return (
     <div className="relative h-full w-full overflow-hidden">

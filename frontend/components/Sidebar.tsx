@@ -56,7 +56,7 @@ const navGroups: Array<{ label: string; items: NavItem[] }> = [
   {
     label: "Engine",
     items: [
-      { id: "engine", label: "Engine", icon: BarChart3 },
+      { id: "engine", label: "Engine", icon: BarChart3, href: "/engine", activePaths: ["/engine"] },
       { id: "optimizer", label: "Optimizer", icon: SlidersHorizontal, href: "/optimizer", activePaths: ["/optimizer"] },
       { id: "montecarlo", label: "Monte Carlo", icon: Blocks, href: "/monte-carlo", activePaths: ["/monte-carlo"] },
     ],
@@ -64,8 +64,8 @@ const navGroups: Array<{ label: string; items: NavItem[] }> = [
   {
     label: "Market Analysis",
     items: [
-      { id: "heatmap", label: "Heatmap", icon: LayoutGrid },
-      { id: "correlation", label: "Correlation", icon: GitBranch },
+      { id: "heatmap", label: "Heatmap", icon: LayoutGrid, href: "/heatmap", activePaths: ["/heatmap"] },
+      { id: "correlation", label: "Correlation", icon: GitBranch, href: "/correlation", activePaths: ["/correlation"] },
       { id: "regime", label: "Regimes", icon: Radar, href: "/regimes", activePaths: ["/regimes"] },
     ],
   },

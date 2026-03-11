@@ -7,13 +7,16 @@ import type {
   OptimizerRunResponse,
   OptimizerStageSummary,
   OptimizerStrategyResult,
-  StrategyParams,
   StopMode,
+  StrategyParams,
+  ValuationMode,
+  ValuationMultiPeriodLogic,
+  ValuationWeightProfile,
   ZoneMode,
 } from "@/lib/optimizer/types";
 import type { OptimizerLoadedData } from "@/lib/server/optimizer/data";
 import { runMonteCarlo } from "@/lib/server/optimizer/monteCarlo";
-import { evaluateStrategyCandidate } from "@/lib/server/optimizer/strategy";
+import { buildOptimizerPreview, evaluateStrategyCandidate } from "@/lib/server/optimizer/strategy";
 
 const TRAIN_START = "2012-01-01T00:00:00Z";
 const TRAIN_END = "2019-12-31T23:59:59Z";
@@ -25,14 +28,19 @@ const REFINE_STAGE_KEEP = 20;
 const OOS_STAGE_KEEP = 5;
 const BROAD_CANDIDATE_BUDGET = 6000;
 const REFINE_CANDIDATE_BUDGET = 4000;
+const INVALID_STRATEGY_KEEP = 24;
 const EVAL_BATCH_SIZE = 500;
 const STAGE_COUNT = 5;
+const FIXED_VALUATION_THRESHOLD = 75;
+const VALUATION_MODE_ORDER: ValuationMode[] = ["ANY_SINGLE", "TWO_OF_THREE", "ALL_THREE", "COMBINED", "WEIGHTED_COMBINED"];
+const MULTI_PERIOD_LOGIC_ORDER: ValuationMultiPeriodLogic[] = ["SINGLE", "OR", "AND", "AGREEMENT"];
+const WEIGHT_PROFILE_ORDER: ValuationWeightProfile[] = ["equal", "macro", "fx"];
 
 const HEATMAP_PAIRS: Array<{ stage: 1 | 2; xKey: OptimizerParameterKey; yKey: OptimizerParameterKey }> = [
-  { stage: 1, xKey: "zoneLookback", yKey: "atrMultiplier" },
-  { stage: 1, xKey: "valuationLength", yKey: "seasonalityYears" },
-  { stage: 2, xKey: "fixedStopPct", yKey: "takeProfitRr" },
-  { stage: 2, xKey: "valuationThreshold", yKey: "holdDays" },
+  { stage: 1, xKey: "valuationPrimaryPeriod", yKey: "valuationModeIndex" },
+  { stage: 1, xKey: "valuationMultiPeriodLogicIndex", yKey: "holdDays" },
+  { stage: 2, xKey: "valuationSecondaryPeriod", yKey: "takeProfitRr" },
+  { stage: 2, xKey: "valuationWeightProfileIndex", yKey: "zoneLookback" },
 ];
 
 type StageEvalOptions = {
@@ -51,6 +59,11 @@ type EvaluatedCandidate = {
   result: Omit<OptimizerStrategyResult, "rank" | "stage" | "strategyId" | "monteCarlo">;
 };
 
+type EvaluationBatch = {
+  valid: EvaluatedCandidate[];
+  invalid: EvaluatedCandidate[];
+};
+
 type RankedCandidate = EvaluatedCandidate & {
   rank: number;
   stage: 1 | 2 | 3;
@@ -63,6 +76,7 @@ type HeatmapBucket = {
   sharpeSum: number;
   cagrSum: number;
   maxDrawdownSum: number;
+  tradeSum: number;
 };
 
 function sleep(ms: number): Promise<void> {
@@ -117,13 +131,37 @@ function dedupeNumbers(values: number[]): number[] {
   return Array.from(new Set(values.map((value) => Number(value.toFixed(4))))).sort((left, right) => left - right);
 }
 
+function valuationModeIndex(mode: ValuationMode): number {
+  return Math.max(0, VALUATION_MODE_ORDER.indexOf(mode));
+}
+
+function multiPeriodLogicIndex(mode: ValuationMultiPeriodLogic): number {
+  return Math.max(0, MULTI_PERIOD_LOGIC_ORDER.indexOf(mode));
+}
+
+function weightProfileIndex(profile: ValuationWeightProfile): number {
+  return Math.max(0, WEIGHT_PROFILE_ORDER.indexOf(profile));
+}
+
 function paramValue(params: StrategyParams, key: OptimizerParameterKey): number {
-  return Number(params[key]);
+  switch (key) {
+    case "valuationModeIndex":
+      return valuationModeIndex(params.valuationPrimaryMode);
+    case "valuationMultiPeriodLogicIndex":
+      return multiPeriodLogicIndex(params.valuationMultiPeriodLogic);
+    case "valuationWeightProfileIndex":
+      return weightProfileIndex(params.valuationWeightProfile);
+    case "valuationSecondaryPeriod":
+      return Number(params.valuationSecondaryPeriod ?? 0);
+    default:
+      return Number(params[key]);
+  }
 }
 
 function strategyId(stage: 1 | 2 | 3, rank: number, params: StrategyParams): string {
   const directionBits = `${params.allowLong ? "L" : ""}${params.allowShort ? "S" : ""}` || "N";
-  return `S${stage}-${String(rank).padStart(4, "0")}-${params.zoneMode}-${params.stopMode}-${params.valuationLength}-${params.holdDays}-${directionBits}`;
+  const valuationBits = `${params.valuationPrimaryPeriod}${params.valuationSecondaryPeriod ? `-${params.valuationSecondaryPeriod}` : ""}-${params.valuationPrimaryMode}-${params.valuationMultiPeriodLogic}-${params.valuationWeightProfile}`;
+  return `S${stage}-${String(rank).padStart(4, "0")}-${params.zoneMode}-${params.stopMode}-${params.zoneLookback}-${params.holdDays}-${valuationBits}-${directionBits}`;
 }
 
 function summarizeRankedCandidate(
@@ -136,10 +174,13 @@ function summarizeRankedCandidate(
     stage: candidate.stage,
     strategyId: candidate.strategyId,
     params: candidate.params,
+    valuation: candidate.result.valuation,
     metrics: candidate.result.metrics,
     assetMetrics: candidate.result.assetMetrics,
     equityCurve: includeDetail ? candidate.result.equityCurve : candidate.result.equityCurve.slice(-24),
     trades: includeDetail ? candidate.result.trades : [],
+    validation: candidate.result.validation,
+    debugAssets: includeDetail ? candidate.result.debugAssets : [],
     monteCarlo,
   };
 }
@@ -152,9 +193,6 @@ function buildBaseCandidateGrid(config: OptimizerConfig): StrategyParams[] {
 
   const stopModes: StopMode[] = ["fixed", "atr"];
   const zoneLookbacks = rangeValues(config.broadRanges.zoneLookback.min, config.broadRanges.zoneLookback.max, config.broadRanges.zoneLookback.step);
-  const valuationLengths = rangeValues(config.broadRanges.valuationLength.min, config.broadRanges.valuationLength.max, config.broadRanges.valuationLength.step)
-    .map((value) => (value >= 20 ? 20 : 10)) as Array<10 | 20>;
-  const valuationThresholds = rangeValues(config.broadRanges.valuationThreshold.min, config.broadRanges.valuationThreshold.max, config.broadRanges.valuationThreshold.step);
   const seasonalityYears = rangeValues(config.broadRanges.seasonalityYears.min, config.broadRanges.seasonalityYears.max, config.broadRanges.seasonalityYears.step);
   const holdDays = rangeValues(config.broadRanges.holdDays.min, config.broadRanges.holdDays.max, config.broadRanges.holdDays.step);
   const atrPeriods = rangeValues(config.broadRanges.atrPeriod.min, config.broadRanges.atrPeriod.max, config.broadRanges.atrPeriod.step);
@@ -163,38 +201,80 @@ function buildBaseCandidateGrid(config: OptimizerConfig): StrategyParams[] {
   const takeProfitRrs = rangeValues(config.broadRanges.takeProfitRr.min, config.broadRanges.takeProfitRr.max, config.broadRanges.takeProfitRr.step);
   const breakEvenRrs = rangeValues(config.broadRanges.breakEvenRr.min, config.broadRanges.breakEvenRr.max, config.broadRanges.breakEvenRr.step);
 
+  const valuationPeriods = [...config.valuationPeriods].sort((left, right) => left - right);
+  const valuationModes = config.valuationModes.length ? config.valuationModes : VALUATION_MODE_ORDER;
+  const multiPeriodLogics = config.valuationMultiPeriodLogics.filter((logic) => logic !== "SINGLE");
+  const weightProfiles = config.valuationWeightProfiles.length ? config.valuationWeightProfiles : WEIGHT_PROFILE_ORDER;
+
   const candidates: StrategyParams[] = [];
   for (const zoneMode of zoneModes) {
     for (const stopMode of stopModes) {
       for (const zoneLookback of zoneLookbacks) {
-        for (const valuationLength of valuationLengths) {
-          for (const valuationThreshold of valuationThresholds) {
-            for (const years of seasonalityYears) {
-              for (const hold of holdDays) {
-                for (const atrPeriod of atrPeriods) {
-                  for (const atrMultiplier of atrMultipliers) {
-                    for (const fixedStopPct of fixedStops) {
-                      for (const takeProfitRr of takeProfitRrs) {
-                        for (const breakEvenRr of breakEvenRrs) {
-                          candidates.push({
-                            zoneMode,
-                            zoneLookback,
-                            valuationLength,
-                            valuationThreshold,
-                            seasonalityYears: years,
-                            holdDays: hold,
-                            stopMode,
-                            atrPeriod,
-                            atrMultiplier,
-                            fixedStopPct,
-                            takeProfitRr,
-                            breakEvenRr,
-                            requireCandleConfirmation: config.toggles.requireCandleConfirmation,
-                            requireValuation: config.toggles.requireValuation,
-                            requireSeasonality: config.toggles.requireSeasonality,
-                            allowLong: config.toggles.allowLong,
-                            allowShort: config.toggles.allowShort,
-                          });
+        for (const years of seasonalityYears) {
+          for (const hold of holdDays) {
+            for (const atrPeriod of atrPeriods) {
+              for (const atrMultiplier of atrMultipliers) {
+                for (const fixedStopPct of fixedStops) {
+                  for (const takeProfitRr of takeProfitRrs) {
+                    for (const breakEvenRr of breakEvenRrs) {
+                      for (const weightProfile of weightProfiles) {
+                        for (const primaryPeriod of valuationPeriods) {
+                          for (const primaryMode of valuationModes) {
+                            candidates.push({
+                              zoneMode,
+                              zoneLookback,
+                              valuationPrimaryPeriod: primaryPeriod,
+                              valuationSecondaryPeriod: null,
+                              valuationPrimaryMode: primaryMode,
+                              valuationSecondaryMode: null,
+                              valuationMultiPeriodLogic: "SINGLE",
+                              valuationWeightProfile: weightProfile,
+                              valuationThreshold: FIXED_VALUATION_THRESHOLD,
+                              seasonalityYears: years,
+                              holdDays: hold,
+                              stopMode,
+                              atrPeriod,
+                              atrMultiplier,
+                              fixedStopPct,
+                              takeProfitRr,
+                              breakEvenRr,
+                              requireCandleConfirmation: config.toggles.requireCandleConfirmation,
+                              requireValuation: true,
+                              requireSeasonality: true,
+                              allowLong: config.toggles.allowLong,
+                              allowShort: config.toggles.allowShort,
+                            });
+                            for (const secondaryPeriod of valuationPeriods.filter((candidate) => candidate > primaryPeriod)) {
+                              for (const secondaryMode of valuationModes) {
+                                for (const multiPeriodLogic of multiPeriodLogics) {
+                                  candidates.push({
+                                    zoneMode,
+                                    zoneLookback,
+                                    valuationPrimaryPeriod: primaryPeriod,
+                                    valuationSecondaryPeriod: secondaryPeriod,
+                                    valuationPrimaryMode: primaryMode,
+                                    valuationSecondaryMode: secondaryMode,
+                                    valuationMultiPeriodLogic: multiPeriodLogic,
+                                    valuationWeightProfile: weightProfile,
+                                    valuationThreshold: FIXED_VALUATION_THRESHOLD,
+                                    seasonalityYears: years,
+                                    holdDays: hold,
+                                    stopMode,
+                                    atrPeriod,
+                                    atrMultiplier,
+                                    fixedStopPct,
+                                    takeProfitRr,
+                                    breakEvenRr,
+                                    requireCandleConfirmation: config.toggles.requireCandleConfirmation,
+                                    requireValuation: true,
+                                    requireSeasonality: true,
+                                    allowLong: config.toggles.allowLong,
+                                    allowShort: config.toggles.allowShort,
+                                  });
+                                }
+                              }
+                            }
+                          }
                         }
                       }
                     }
@@ -228,11 +308,8 @@ function refinedValueSet(center: number, step: number, min: number, max: number)
 function buildRefinedCandidates(seed: StrategyParams, config: OptimizerConfig): StrategyParams[] {
   const refinedZoneModes: ZoneMode[] = seed.zoneMode === "both" ? ["both", "normal", "strong"] : [seed.zoneMode, "both"];
   const refinedStopModes: StopMode[] = seed.stopMode === "atr" ? ["atr", "fixed"] : ["fixed", "atr"];
-
   const neighborhood = {
     zoneLookback: refinedValueSet(seed.zoneLookback, config.broadRanges.zoneLookback.step, config.broadRanges.zoneLookback.min, config.broadRanges.zoneLookback.max),
-    valuationLength: dedupeNumbers([10, 20].filter((value) => Math.abs(value - seed.valuationLength) <= 10)) as Array<10 | 20>,
-    valuationThreshold: refinedValueSet(seed.valuationThreshold, config.broadRanges.valuationThreshold.step, config.broadRanges.valuationThreshold.min, config.broadRanges.valuationThreshold.max),
     seasonalityYears: refinedValueSet(seed.seasonalityYears, config.broadRanges.seasonalityYears.step, config.broadRanges.seasonalityYears.min, config.broadRanges.seasonalityYears.max),
     holdDays: refinedValueSet(seed.holdDays, config.broadRanges.holdDays.step, config.broadRanges.holdDays.min, config.broadRanges.holdDays.max),
     atrPeriod: refinedValueSet(seed.atrPeriod, config.broadRanges.atrPeriod.step, config.broadRanges.atrPeriod.min, config.broadRanges.atrPeriod.max),
@@ -246,8 +323,6 @@ function buildRefinedCandidates(seed: StrategyParams, config: OptimizerConfig): 
   for (const zoneMode of refinedZoneModes) {
     for (const stopMode of refinedStopModes) {
       for (const zoneLookback of neighborhood.zoneLookback) candidates.push({ ...seed, zoneMode, stopMode, zoneLookback });
-      for (const valuationLength of neighborhood.valuationLength) candidates.push({ ...seed, zoneMode, stopMode, valuationLength });
-      for (const valuationThreshold of neighborhood.valuationThreshold) candidates.push({ ...seed, zoneMode, stopMode, valuationThreshold });
       for (const seasonalityYears of neighborhood.seasonalityYears) candidates.push({ ...seed, zoneMode, stopMode, seasonalityYears });
       for (const holdDays of neighborhood.holdDays) candidates.push({ ...seed, zoneMode, stopMode, holdDays });
       for (const atrPeriod of neighborhood.atrPeriod) candidates.push({ ...seed, zoneMode, stopMode, atrPeriod });
@@ -255,17 +330,47 @@ function buildRefinedCandidates(seed: StrategyParams, config: OptimizerConfig): 
       for (const fixedStopPct of neighborhood.fixedStopPct) candidates.push({ ...seed, zoneMode, stopMode, fixedStopPct });
       for (const takeProfitRr of neighborhood.takeProfitRr) candidates.push({ ...seed, zoneMode, stopMode, takeProfitRr });
       for (const breakEvenRr of neighborhood.breakEvenRr) candidates.push({ ...seed, zoneMode, stopMode, breakEvenRr });
+      for (const valuationPrimaryPeriod of config.valuationPeriods) candidates.push({ ...seed, zoneMode, stopMode, valuationPrimaryPeriod });
+      for (const valuationPrimaryMode of config.valuationModes) candidates.push({ ...seed, zoneMode, stopMode, valuationPrimaryMode });
+      for (const valuationWeightProfile of config.valuationWeightProfiles) candidates.push({ ...seed, zoneMode, stopMode, valuationWeightProfile });
+      for (const valuationSecondaryPeriod of [null, ...config.valuationPeriods.filter((period) => period !== seed.valuationPrimaryPeriod)]) {
+        candidates.push({
+          ...seed,
+          zoneMode,
+          stopMode,
+          valuationSecondaryPeriod,
+          valuationSecondaryMode: valuationSecondaryPeriod == null ? null : (seed.valuationSecondaryMode ?? seed.valuationPrimaryMode),
+          valuationMultiPeriodLogic: valuationSecondaryPeriod == null ? "SINGLE" : seed.valuationMultiPeriodLogic,
+        });
+      }
+      for (const valuationSecondaryMode of config.valuationModes) {
+        if (seed.valuationSecondaryPeriod != null) {
+          candidates.push({ ...seed, zoneMode, stopMode, valuationSecondaryMode });
+        }
+      }
+      for (const valuationMultiPeriodLogic of config.valuationMultiPeriodLogics) {
+        candidates.push({
+          ...seed,
+          zoneMode,
+          stopMode,
+          valuationMultiPeriodLogic,
+          valuationSecondaryPeriod: valuationMultiPeriodLogic === "SINGLE" ? null : (seed.valuationSecondaryPeriod ?? config.valuationPeriods[1] ?? config.valuationPeriods[0] ?? null),
+          valuationSecondaryMode: valuationMultiPeriodLogic === "SINGLE" ? null : (seed.valuationSecondaryMode ?? seed.valuationPrimaryMode),
+        });
+      }
     }
   }
 
   return dedupeParams(
     candidates.map((params) => ({
       ...params,
+      valuationThreshold: FIXED_VALUATION_THRESHOLD,
+      requireValuation: true,
+      requireSeasonality: true,
       zoneLookback: Math.round(params.zoneLookback),
       seasonalityYears: Math.round(params.seasonalityYears),
       holdDays: Math.round(params.holdDays),
       atrPeriod: Math.round(params.atrPeriod),
-      valuationLength: params.valuationLength >= 20 ? 20 : 10,
     })),
   );
 }
@@ -309,9 +414,9 @@ async function evaluateCandidates(
     label: string;
     stageIndex: number;
   },
-): Promise<EvaluatedCandidate[]> {
-  const strict: EvaluatedCandidate[] = [];
-  const relaxed: EvaluatedCandidate[] = [];
+): Promise<EvaluationBatch> {
+  const valid: EvaluatedCandidate[] = [];
+  const invalid: EvaluatedCandidate[] = [];
   const startedAt = Date.now();
 
   await emitProgress(progress.pipeline, progress.stage, progress.label, progress.stageIndex, 0, candidates.length, startedAt, "Preparing batch evaluation.");
@@ -319,29 +424,19 @@ async function evaluateCandidates(
   for (let offset = 0; offset < candidates.length; offset += EVAL_BATCH_SIZE) {
     const batch = candidates.slice(offset, offset + EVAL_BATCH_SIZE);
     for (const params of batch) {
-      const strictResult = evaluateStrategyCandidate(
+      const evaluation = evaluateStrategyCandidate(
         params,
         data.assets,
         data.references,
+        data.integrity,
         options.startDate,
         options.endDate,
         { enforceFilters: options.enforceFilters },
       );
-      if (strictResult) {
-        strict.push({ params, result: strictResult });
-        continue;
-      }
-      if (!options.enforceFilters) continue;
-      const relaxedResult = evaluateStrategyCandidate(
-        params,
-        data.assets,
-        data.references,
-        options.startDate,
-        options.endDate,
-        { enforceFilters: false },
-      );
-      if (relaxedResult) {
-        relaxed.push({ params, result: relaxedResult });
+      if (evaluation.status === "valid") {
+        valid.push({ params, result: evaluation.result });
+      } else if (evaluation.status === "invalid_trade_count") {
+        invalid.push({ params, result: evaluation.result });
       }
     }
 
@@ -358,7 +453,10 @@ async function evaluateCandidates(
     await sleep(0);
   }
 
-  return [...strict, ...relaxed].sort((left, right) => right.result.metrics.score - left.result.metrics.score);
+  return {
+    valid: valid.sort((left, right) => right.result.metrics.score - left.result.metrics.score),
+    invalid: invalid.sort((left, right) => right.result.metrics.score - left.result.metrics.score).slice(0, INVALID_STRATEGY_KEEP),
+  };
 }
 
 function rankCandidates(stage: 1 | 2 | 3, candidates: EvaluatedCandidate[]): RankedCandidate[] {
@@ -394,12 +492,14 @@ function buildHeatmap(stage: 1 | 2, xKey: OptimizerParameterKey, yKey: Optimizer
       sharpeSum: 0,
       cagrSum: 0,
       maxDrawdownSum: 0,
+      tradeSum: 0,
     };
     current.candidates.push(candidate);
     current.scoreSum += candidate.result.metrics.score;
     current.sharpeSum += candidate.result.metrics.sharpe;
     current.cagrSum += candidate.result.metrics.cagr;
     current.maxDrawdownSum += candidate.result.metrics.maxDrawdown;
+    current.tradeSum += candidate.result.metrics.trades;
     buckets.set(key, current);
   }
 
@@ -413,6 +513,7 @@ function buildHeatmap(stage: 1 | 2, xKey: OptimizerParameterKey, yKey: Optimizer
       sharpe: bucket.sharpeSum / count,
       cagr: bucket.cagrSum / count,
       maxDrawdown: bucket.maxDrawdownSum / count,
+      trades: bucket.tradeSum / count,
       count,
       smoothedScore: 0,
     };
@@ -529,8 +630,34 @@ function buildClustersForHeatmap(heatmap: OptimizerParameterHeatmap, rankedCandi
   });
 }
 
+function mergeInvalidCandidates(stage: 1 | 2 | 3, candidates: EvaluatedCandidate[], current: OptimizerStrategyResult[]): OptimizerStrategyResult[] {
+  const seen = new Set(current.map((item) => JSON.stringify(item.params)));
+  const additions = candidates
+    .filter((candidate) => !seen.has(JSON.stringify(candidate.params)))
+    .slice(0, Math.max(0, INVALID_STRATEGY_KEEP - current.length))
+    .map((candidate, index) => ({
+      rank: index + 1,
+      stage,
+      strategyId: `INVALID-S${stage}-${String(index + 1).padStart(3, "0")}`,
+      params: candidate.params,
+      valuation: candidate.result.valuation,
+      metrics: candidate.result.metrics,
+      assetMetrics: candidate.result.assetMetrics,
+      equityCurve: candidate.result.equityCurve.slice(-24),
+      trades: candidate.result.trades,
+      validation: candidate.result.validation,
+      debugAssets: candidate.result.debugAssets,
+      monteCarlo: null,
+    }));
+  return [...current, ...additions].slice(0, INVALID_STRATEGY_KEEP);
+}
+
 export async function runOptimizerPipeline(config: OptimizerConfig, data: OptimizerLoadedData, options: PipelineOptions): Promise<OptimizerRunResponse> {
   const warnings = [...data.warnings];
+  const preview = buildOptimizerPreview(config, data, config.assets[0] ?? data.assets[0]?.assetId ?? "cross_eurusd");
+  if (preview.requiresConfirmation) {
+    warnings.push("Invalid candle construction detected.");
+  }
 
   const broadUniverse = buildBaseCandidateGrid(config);
   const sampledBroadUniverse = trimCandidateGrid(broadUniverse, BROAD_CANDIDATE_BUDGET);
@@ -538,15 +665,16 @@ export async function runOptimizerPipeline(config: OptimizerConfig, data: Optimi
     warnings.push(`Stage 1 candidate grid trimmed from ${broadUniverse.length} to ${sampledBroadUniverse.length} combinations for interactive runtime.`);
   }
 
-  const stage1RankedAll = rankCandidates(
-    1,
-    await evaluateCandidates(
-      data,
-      sampledBroadUniverse,
-      { startDate: TRAIN_START, endDate: TRAIN_END, enforceFilters: true },
-      { pipeline: options, stage: "stage1", label: "Stage 1 - Parameter discovery", stageIndex: 2 },
-    ),
+  let invalidStrategies: OptimizerStrategyResult[] = [];
+
+  const stage1Batch = await evaluateCandidates(
+    data,
+    sampledBroadUniverse,
+    { startDate: TRAIN_START, endDate: TRAIN_END, enforceFilters: true },
+    { pipeline: options, stage: "stage1", label: "Stage 1 - Parameter discovery", stageIndex: 2 },
   );
+  invalidStrategies = mergeInvalidCandidates(1, stage1Batch.invalid, invalidStrategies);
+  const stage1RankedAll = rankCandidates(1, stage1Batch.valid);
   const stage1Top = stage1RankedAll.slice(0, BROAD_STAGE_KEEP);
 
   const refinedUniverse = trimCandidateGrid(
@@ -557,26 +685,24 @@ export async function runOptimizerPipeline(config: OptimizerConfig, data: Optimi
     warnings.push("Stage 2 refinement received no valid candidates from Stage 1.");
   }
 
-  const stage2RankedAll = rankCandidates(
-    2,
-    await evaluateCandidates(
-      data,
-      refinedUniverse,
-      { startDate: TRAIN_START, endDate: TRAIN_END, enforceFilters: true },
-      { pipeline: options, stage: "stage2", label: "Stage 2 - Parameter refinement", stageIndex: 3 },
-    ),
+  const stage2Batch = await evaluateCandidates(
+    data,
+    refinedUniverse,
+    { startDate: TRAIN_START, endDate: TRAIN_END, enforceFilters: true },
+    { pipeline: options, stage: "stage2", label: "Stage 2 - Parameter refinement", stageIndex: 3 },
   );
+  invalidStrategies = mergeInvalidCandidates(2, stage2Batch.invalid, invalidStrategies);
+  const stage2RankedAll = rankCandidates(2, stage2Batch.valid);
   const stage2Top = stage2RankedAll.slice(0, REFINE_STAGE_KEEP);
 
-  const stage3Ranked = rankCandidates(
-    3,
-    await evaluateCandidates(
-      data,
-      stage2Top.map((candidate) => candidate.params),
-      { startDate: TEST_START, endDate: TEST_END, enforceFilters: false },
-      { pipeline: options, stage: "stage3", label: "Stage 3 - Out of sample test", stageIndex: 4 },
-    ),
-  ).slice(0, OOS_STAGE_KEEP);
+  const stage3Batch = await evaluateCandidates(
+    data,
+    stage2Top.map((candidate) => candidate.params),
+    { startDate: TEST_START, endDate: TEST_END, enforceFilters: false },
+    { pipeline: options, stage: "stage3", label: "Stage 3 - Out of sample test", stageIndex: 4 },
+  );
+  invalidStrategies = mergeInvalidCandidates(3, stage3Batch.invalid, invalidStrategies);
+  const stage3Ranked = rankCandidates(3, stage3Batch.valid).slice(0, OOS_STAGE_KEEP);
 
   const monteCarloStartedAt = Date.now();
   const monteCarloTotal = Math.max(1, stage3Ranked.length * Math.max(1000, config.monteCarloSimulations));
@@ -623,6 +749,8 @@ export async function runOptimizerPipeline(config: OptimizerConfig, data: Optimi
     generatedAt: new Date().toISOString(),
     config,
     coverage: data.coverage,
+    integrity: data.integrity,
+    preview,
     warnings,
     stageSummaries: [
       buildStageSummary(1, "Stage 1 - Broad Search (2012-01-01 to 2019-12-31)", stage1Top, [1, 2, 3, 4, 5]),
@@ -630,6 +758,7 @@ export async function runOptimizerPipeline(config: OptimizerConfig, data: Optimi
       buildStageSummary(3, "Stage 3 - Out of Sample (2020-01-01 to 2025-12-31)", stage3Ranked, [1, 2, 3, 4, 5]),
     ],
     topStrategies,
+    invalidStrategies,
     stability: {
       availablePairs: heatmaps.map((heatmap) => ({
         id: heatmap.id,

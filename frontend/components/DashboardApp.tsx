@@ -11,9 +11,9 @@ import { SettingsPanel } from "./globe/SettingsPanel";
 import { AssetHeatmapPanel } from "./globe/AssetHeatmapPanel";
 import { SignalDetailPanel } from "./globe/SignalDetailPanel";
 import { GlobeApi, subscribeApiLoading } from "../lib/api";
+import { buildGlobeSeasonalityAnalysis } from "../lib/globeSeasonality";
 import { iconUrlForAsset } from "../lib/icons";
 import { buildDisplayMarkers } from "../lib/markers";
-import { normalizedSeasonalityCurve } from "../lib/seasonality";
 import { DEFAULT_GLOBE_STATE, hasPersistedGlobeState, loadInitialGlobeState, persistGlobeState } from "../lib/state";
 import type {
   AssetRegionHighlightResponse,
@@ -1611,87 +1611,31 @@ export default function App() {
     setFocusLocation(null);
   }, []);
 
-  const seasonStats = useMemo(() => {
-    const stats = seasonality?.stats;
-    const curve = Array.isArray(seasonality?.curve) ? seasonality?.curve : [];
+  const seasonalityResearch = useMemo(
+    () => buildGlobeSeasonalityAnalysis(timeseries?.ohlcv ?? [], seasonality),
+    [seasonality, timeseries?.ohlcv],
+  );
 
-    let bestHorizonDays = Math.round(finiteOr(stats?.bestHorizonDays, finiteOr(seasonality?.projectionDays, 12)));
-    bestHorizonDays = clampNum(bestHorizonDays, 10, 20);
-
-    let avgReturn20d = finiteOr(stats?.avgReturn20d, Number.NaN);
-    let hitRateRaw = finiteOr(stats?.hitRate, Number.NaN);
-    let expectedValue = finiteOr(stats?.expectedValue, Number.NaN);
-    let sharpeRatio = finiteOr(stats?.sharpeRatio, Number.NaN);
-    let sortinoRatio = finiteOr(stats?.sortinoRatio, Number.NaN);
-    let direction = String(stats?.direction ?? "").toUpperCase();
-
-    if ((!Number.isFinite(avgReturn20d) || !Number.isFinite(hitRateRaw) || !Number.isFinite(sharpeRatio) || !Number.isFinite(sortinoRatio)) && curve.length >= 2) {
-      const ys = curve.map((p) => finiteOr(p?.y, 0));
-      const start = ys[0] ?? 0;
-      const end = ys[ys.length - 1] ?? 0;
-      const delta = end - start;
-      const diffs: number[] = [];
-      for (let i = 1; i < ys.length; i += 1) {
-        diffs.push((ys[i] ?? 0) - (ys[i - 1] ?? 0));
-      }
-      const meanDiff = diffs.length ? diffs.reduce((a, b) => a + b, 0) / diffs.length : 0;
-      const varDiff = diffs.length
-        ? diffs.reduce((a, b) => a + (b - meanDiff) * (b - meanDiff), 0) / Math.max(1, diffs.length - 1)
-        : 0;
-      const stdDiff = Math.sqrt(Math.max(0, varDiff));
-
-      if (!Number.isFinite(avgReturn20d)) avgReturn20d = delta;
-      if (!Number.isFinite(hitRateRaw)) {
-        const base = delta >= 0 ? 0.58 : 0.42;
-        hitRateRaw = clampNum(base + Math.sign(delta || 0) * Math.min(0.1, Math.abs(delta) * 0.005), 0.05, 0.95);
-      }
-      if (!Number.isFinite(expectedValue)) expectedValue = avgReturn20d * hitRateRaw;
-      if (!Number.isFinite(sharpeRatio)) sharpeRatio = stdDiff > 1e-9 ? meanDiff / stdDiff : 0;
-      if (!Number.isFinite(sortinoRatio)) sortinoRatio = stdDiff > 1e-9 ? (meanDiff * 1.15) / stdDiff : 0;
-      if (!(direction === "LONG" || direction === "SHORT")) direction = delta >= 0 ? "LONG" : "SHORT";
-      if (!Number.isFinite(bestHorizonDays) || bestHorizonDays < 10 || bestHorizonDays > 20) {
-        bestHorizonDays = clampNum(Math.max(10, ys.length - 1), 10, 20);
-      }
-    }
-
-    if (!(direction === "LONG" || direction === "SHORT")) direction = finiteOr(avgReturn20d, 0) >= 0 ? "LONG" : "SHORT";
-    // tolerate payloads that send hitRate either as fraction (0..1) or percent (0..100)
-    if (Number.isFinite(hitRateRaw) && hitRateRaw > 1.5) hitRateRaw = hitRateRaw / 100.0;
-    if (!Number.isFinite(avgReturn20d)) avgReturn20d = 0;
-    if (!Number.isFinite(hitRateRaw)) hitRateRaw = 0.5;
-    if (!Number.isFinite(expectedValue)) expectedValue = avgReturn20d * hitRateRaw;
-    if (!Number.isFinite(sharpeRatio)) sharpeRatio = 0;
-    if (!Number.isFinite(sortinoRatio)) sortinoRatio = 0;
-
-    return {
-      avgReturn20d,
-      hitRateRaw: clampNum(hitRateRaw, 0, 1),
-      expectedValue,
-      direction: direction as "LONG" | "SHORT",
-      sharpeRatio,
-      sortinoRatio,
-      bestHorizonDays: clampNum(bestHorizonDays, 10, 20),
-    };
-  }, [seasonality]);
-
-  const avgReturn = seasonStats.avgReturn20d;
-  const hitRate = clampNum(seasonStats.hitRateRaw * 100, 0, 100);
+  const seasonStats = seasonalityResearch.stats;
+  const avgReturn = seasonStats.averageReturnPct;
+  const hitRate = clampNum(seasonStats.winRatePct, 0, 100);
   const seasonDirection = seasonStats.direction;
   const seasonSharpe = seasonStats.sharpeRatio;
   const seasonSortino = seasonStats.sortinoRatio;
   const seasonHorizon = seasonStats.bestHorizonDays;
-  const seasonBaseColor = seasonDirection === "LONG" ? "#39ff40" : "#ff384c";
-  const winrateColor = hitRate < 58 ? "#94a3b8" : (seasonDirection === "LONG" ? "#39ff40" : "#ff384c");
+  const winrateColor = hitRate < 58
+    ? "#94a3b8"
+    : (seasonDirection === "LONG" ? "#39ff40" : seasonDirection === "SHORT" ? "#ff384c" : "#94a3b8");
   const winrateArc = `conic-gradient(${winrateColor} ${hitRate.toFixed(2)}%, rgba(71,85,105,0.28) 0)`;
   const seasonWinrateSpark = useMemo(() => {
-    const curve = normalizedSeasonalityCurve(seasonality).map((point) => Number(point.y));
+    const curve = seasonalityResearch.curve.map((point) => Number(point.y));
     return buildMiniSparkPaths(curve);
-  }, [seasonality]);
+  }, [seasonalityResearch.curve]);
   const currentSeasonPattern = useMemo(() => {
     const holdDays = Math.max(10, Math.min(20, Math.round(finiteOr(seasonHorizon, 12))));
     const today = currentUtcDayOfYear();
     const endDay = Math.min(366, today + holdDays);
-    const curve = (seasonality?.curve ?? [])
+    const curve = seasonalityResearch.curve
       .map((point) => ({
         x: Number(point.x),
         y: Number(point.y),
@@ -1718,7 +1662,7 @@ export default function App() {
       direction,
       avgReturnPct: delta,
     };
-  }, [avgReturn, seasonHorizon, seasonality]);
+  }, [avgReturn, seasonHorizon, seasonalityResearch.curve]);
   const seasonHorizonLabel = `${Math.max(10, Math.min(20, Math.round(finiteOr(seasonHorizon, 12))))} Tage`;
   const avgReturnLabel = `${finiteOr(avgReturn, 0).toFixed(2)}%`;
   const hitRateLabel = `${hitRate.toFixed(0)}%`;
@@ -1732,14 +1676,24 @@ export default function App() {
     const v = Math.abs(finiteOr(value, 0));
     if (v < 0.25) return "#eef5ff";
     if (v < 0.9) return neutralAccent;
-    return seasonDirection === "LONG" ? "#39ff40" : "#ff384c";
+    return seasonDirection === "LONG" ? "#39ff40" : seasonDirection === "SHORT" ? "#ff384c" : "#cbd5e1";
   };
-  const seasonColor = seasonBaseColor;
   const sharpeColor = colorizeRiskMetric(seasonSharpe);
-  const seasonStateLabel = seasonDirection === "LONG" ? "Bullish" : "Bearish";
   const currentPatternColor = currentSeasonPattern.direction === "LONG" ? "#39ff40" : "#ff384c";
   const currentPatternStateLabel = currentSeasonPattern.direction === "LONG" ? "Bullish" : "Bearish";
   const currentPatternReturnLabel = `${finiteOr(currentSeasonPattern.avgReturnPct, 0) >= 0 ? "+" : ""}${finiteOr(currentSeasonPattern.avgReturnPct, 0).toFixed(2)}%`;
+  const seasonInterpretation = seasonStats.interpretation;
+  const latestValuation = useMemo(() => {
+    const combined = evaluation?.series?.find((series) => String(series.id || "").toLowerCase() === "combined")
+      ?? evaluation?.series?.[0];
+    const latest = [...(combined?.points ?? [])]
+      .reverse()
+      .find((point) => Number.isFinite(Number(point.v10)) || Number.isFinite(Number(point.v20)));
+    return {
+      v10: Number.isFinite(Number(latest?.v10)) ? Number(latest?.v10) : null,
+      v20: Number.isFinite(Number(latest?.v20)) ? Number(latest?.v20) : null,
+    };
+  }, [evaluation?.series]);
   const chartHeaderLabel = useMemo(() => {
     if (!selectedAsset) return "Asset";
     if (selectedAsset.id === "dax40") return "DAX 40";
@@ -1750,8 +1704,8 @@ export default function App() {
     return selectedAsset.name;
   }, [selectedAsset]);
   const chartSourceLabel = useMemo(
-    () => `${String(timeseries?.sourceUsed || timeseries?.source || dataSource).replace(/^./, (s) => s.toUpperCase())}${timeseries?.fallbackUsed ? " (fallback)" : ""}`,
-    [dataSource, timeseries?.fallbackUsed, timeseries?.source, timeseries?.sourceUsed],
+    () => `${String(timeseries?.sourceUsed || timeseries?.source || dataSource).replace(/^./, (s) => s.toUpperCase())}`,
+    [dataSource, timeseries?.source, timeseries?.sourceUsed],
   );
   const globeGridLayoutClass = isGlobeFullscreen
     ? "h-full"
@@ -2074,40 +2028,40 @@ export default function App() {
                 <div className="ivq-subpanel relative h-full min-h-0 overflow-hidden rounded-md p-[2px]">
                   <div className="h-full min-h-0">
                     <Suspense fallback={<div className="grid h-full place-items-center text-xs text-slate-400">Loading seasonality...</div>}>
-                      <GlobeSeasonalityChart payload={seasonality} loopReplayTick={visualLoopEnabled ? visualLoopTick : 0} />
+                      <GlobeSeasonalityChart payload={seasonality} candles={timeseries?.ohlcv ?? []} loopReplayTick={visualLoopEnabled ? visualLoopTick : 0} />
                     </Suspense>
                   </div>
                 </div>
               <div className="grid h-full min-h-0 grid-cols-2 gap-2.5 text-[10px] min-[769px]:grid-cols-1 min-[769px]:grid-rows-[repeat(5,minmax(0,1fr))]">
                 <div className="ivq-subpanel min-h-0 overflow-hidden p-2.5">
-                  <div className="mb-1 text-[#b2c5de]">Current Pattern</div>
+                  <div className="mb-1 text-[#b2c5de]">Interpretation</div>
                   <div className="flex items-center justify-between gap-2">
                     <div className="min-w-0">
                       <div className="truncate text-[13px] font-semibold" style={{ color: currentPatternColor }}>
-                        {currentSeasonPattern.label}
+                        {seasonInterpretation}
                       </div>
                       <div className="mt-1 text-[10px] font-semibold" style={{ color: currentPatternColor }}>
                         {currentPatternStateLabel} / {currentPatternReturnLabel}
                       </div>
                     </div>
-                    <span className="text-[10px] font-semibold text-slate-300">{currentSeasonPattern.holdLabel}</span>
+                    <span className="text-[10px] font-semibold text-slate-300">{seasonStats.samples} samples</span>
                   </div>
                   <div className="mt-1 h-1 rounded-full bg-slate-700/45">
                     <div className="h-1 rounded-full" style={{ width: `${Math.max(0, Math.min(100, (finiteOr(seasonHorizon, 12) - 10) * 10))}%`, backgroundColor: currentPatternColor }} />
                   </div>
                 </div>
                 <div className="ivq-subpanel min-h-0 overflow-hidden p-2.5">
-                  <div className="mb-1 text-[#b2c5de]">Average Return</div>
+                  <div className="mb-1 text-[#b2c5de]" title="Primary seasonality quality metric. Higher means better risk-adjusted seasonal edge.">Sharpe Ratio</div>
                   <div className="flex items-center justify-between gap-2">
-                    <div className="min-w-[72px] text-[14px] font-semibold" style={{ color: avgReturn >= 0 ? "#39ff40" : "#ff384c" }}>{avgReturnLabel}</div>
-                    <span className="text-[10px] font-semibold text-slate-300">{avgReturn >= 0 ? "Pos" : "Neg"}</span>
+                    <div className="min-w-[72px] text-[14px] font-semibold" style={{ color: sharpeColor }}>{sharpeLabel}</div>
+                    <span className="text-[10px] font-semibold text-slate-300">{seasonHorizonLabel}</span>
                   </div>
                   <div className="mt-1 h-1 rounded-full bg-slate-700/45">
-                    <div className="h-1 rounded-full" style={{ width: `${avgReturnPct}%`, backgroundColor: avgReturn >= 0 ? "#39ff40" : "#ff384c" }} />
+                    <div className="h-1 rounded-full" style={{ width: `${sharpePct}%`, backgroundColor: sharpeColor }} />
                   </div>
                 </div>
                 <div className="ivq-subpanel min-h-0 overflow-hidden p-2.5">
-                  <div className="mb-1 text-[#b2c5de]">Winrate</div>
+                  <div className="mb-1 text-[#b2c5de]" title="Directional seasonal win rate across the last 10 years.">Winrate</div>
                   <div className="grid grid-cols-[minmax(0,1fr)_52px] items-center gap-2">
                     <div className="min-w-0">
                       <div className="text-[14px] font-semibold leading-none" style={{ color: winrateColor }}>
@@ -2134,23 +2088,23 @@ export default function App() {
                   </div>
                 </div>
                 <div className="ivq-subpanel min-h-0 overflow-hidden p-2.5">
-                  <div className="mb-1 text-[#b2c5de]">Sharpe Ratio</div>
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="min-w-[72px] text-[14px] font-semibold" style={{ color: sharpeColor }}>{sharpeLabel}</div>
-                    <span className="text-[10px] font-semibold text-slate-300">S</span>
-                  </div>
-                  <div className="mt-1 h-1 rounded-full bg-slate-700/45">
-                    <div className="h-1 rounded-full" style={{ width: `${sharpePct}%`, backgroundColor: sharpeColor }} />
-                  </div>
-                </div>
-                <div className="ivq-subpanel min-h-0 overflow-hidden p-2.5">
-                  <div className="mb-1 text-[#b2c5de]">Sortino Ratio</div>
+                  <div className="mb-1 text-[#b2c5de]" title="Sortino penalizes downside volatility only.">Sortino Ratio</div>
                   <div className="flex items-center justify-between gap-2">
                     <div className="min-w-[72px] text-[14px] font-semibold" style={{ color: colorizeRiskMetric(seasonSortino) }}>{sortinoLabel}</div>
-                    <span className="text-[10px] font-semibold text-slate-300">So</span>
+                    <span className="text-[10px] font-semibold text-slate-300">Sortino</span>
                   </div>
                   <div className="mt-1 h-1 rounded-full bg-slate-700/45">
                     <div className="h-1 rounded-full" style={{ width: `${sortinoPct}%`, backgroundColor: colorizeRiskMetric(seasonSortino) }} />
+                  </div>
+                </div>
+                <div className="ivq-subpanel min-h-0 overflow-hidden p-2.5">
+                  <div className="mb-1 text-[#b2c5de]" title="Average terminal return of the selected 10-20 day seasonal window.">Average Return</div>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-[72px] text-[14px] font-semibold" style={{ color: avgReturn >= 0 ? "#39ff40" : "#ff384c" }}>{avgReturnLabel}</div>
+                    <span className="text-[10px] font-semibold text-slate-300">{currentSeasonPattern.holdLabel}</span>
+                  </div>
+                  <div className="mt-1 h-1 rounded-full bg-slate-700/45">
+                    <div className="h-1 rounded-full" style={{ width: `${avgReturnPct}%`, backgroundColor: avgReturn >= 0 ? "#39ff40" : "#ff384c" }} />
                   </div>
                 </div>
               </div>
@@ -2162,8 +2116,8 @@ export default function App() {
               indicators={timeseries?.indicators}
               aiScore={Number(timeseries?.aiScore?.total ?? 50)}
               breakdown={timeseries?.aiScore?.breakdown}
-              confidenceScore={Number(signalDetail?.confidenceScore ?? 0)}
-              signalQuality={signalDetail?.signalQuality ?? "Low"}
+              valuation10={latestValuation.v10}
+              valuation20={latestValuation.v20}
               goldThemeEnabled={goldThemeEnabled}
             />
           </div>
@@ -2183,7 +2137,7 @@ export default function App() {
                 },
                 {
                   label: "Seasonality Bias",
-                  value: String(seasonality?.stats?.direction ?? "NEUTRAL").toUpperCase(),
+                  value: seasonDirection,
                 },
                 {
                   label: "Momentum",
